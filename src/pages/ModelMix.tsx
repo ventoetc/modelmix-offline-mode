@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { 
   Send, Plus, Minus, RefreshCw, 
   Sparkles, Pencil, Zap, AlignLeft, FileText,
-  Coins, FilePlus
+  Coins, FilePlus, Settings
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -288,7 +288,7 @@ const ModelMix = () => {
     if (saved) {
       try {
         const session = JSON.parse(saved);
-        return session.responses || [];
+        return Array.isArray(session.responses) ? session.responses : [];
       } catch {
         return [];
       }

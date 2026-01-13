@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
 // Polyfill for crypto.randomUUID in non-secure contexts (e.g. HTTP)
 if (typeof crypto === 'undefined') {
@@ -18,4 +19,8 @@ if (typeof crypto.randomUUID === 'undefined') {
   };
 }
 
-createRoot(document.getElementById("root")!).render(<App />);
+createRoot(document.getElementById("root")!).render(
+  <ErrorBoundary>
+    <App />
+  </ErrorBoundary>
+);

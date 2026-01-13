@@ -18,3 +18,4 @@ export interface ChatResponse {
   visibility?: "public" | "mentioned";
   visibleToModelIds?: string[];
 }
+
