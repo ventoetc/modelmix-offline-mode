@@ -1,0 +1,31 @@
+project_id = "qalofwkcrxrvkbpahdva"
+
+[functions.chat]
+verify_jwt = false
+
+[functions.credits]
+verify_jwt = false
+
+[functions.shadow-analyze]
+verify_jwt = false
+
+[functions.track-action]
+verify_jwt = false
+
+[functions.create-test-user]
+verify_jwt = false
+
+[functions.provision-founders]
+verify_jwt = false
+
+[functions.send-waitlist-invite]
+verify_jwt = false
+
+[functions.submit-tester-approval]
+verify_jwt = false
+
+[functions.approve-tester]
+verify_jwt = false
+
+[functions.seed-test-accounts]
+verify_jwt = false

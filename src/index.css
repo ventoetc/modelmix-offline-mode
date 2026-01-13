@@ -1,0 +1,243 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap");
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ModelMix Design System - Warm, Inviting, Apple-grade
+   Base: Warm cream/sand neutrals
+   Accent: Electric violet (single energetic color)
+   All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Core palette - Warm cream/sand base */
+    --background: 209 40% 96%;
+    --foreground: 222 47% 11%;
+
+    --card: 210 40% 98%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 214 31% 91%;
+    --popover-foreground: 222 47% 11%;
+
+    /* Primary - Electric violet (single accent) */
+    --primary: 200 98% 39%;
+    --primary-foreground: 204 100% 97%;
+
+    /* Secondary - Warm sand */
+    --secondary: 215 24% 26%;
+    --secondary-foreground: 210 40% 98%;
+
+    /* Muted - Warm gray */
+    --muted: 215 20% 65%;
+    --muted-foreground: 222 47% 11%;
+
+    /* Accent - Lighter violet for hover states */
+    --accent: 210 40% 98%;
+    --accent-foreground: 215 19% 34%;
+
+    /* Success - Soft green */
+    --success: 158 64% 42%;
+    --success-foreground: 0 0% 100%;
+
+    /* Warning - Warm amber */
+    --warning: 38 92% 50%;
+    --warning-foreground: 38 92% 15%;
+
+    --destructive: 0 72% 50%;
+    --destructive-foreground: 0 85% 97%;
+
+    --border: 212 26% 83%;
+    --input: 212 26% 83%;
+    --ring: 200 98% 39%;
+
+    --radius: 0.5rem;
+
+    /* Gradient tokens - subtle and warm */
+    --gradient-primary: linear-gradient(135deg, hsl(262 83% 58%) 0%, hsl(280 75% 55%) 100%);
+    --gradient-surface: linear-gradient(180deg, hsl(40 33% 98%) 0%, hsl(35 25% 96%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(40 33% 98%) 0%, hsl(262 60% 98%) 50%, hsl(40 30% 97%) 100%);
+
+    /* Refined shadows - subtle with violet tint for interactivity */
+    --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
+    --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 2px 4px -1px hsl(0 0% 0% / 0.1);
+    --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 4px 6px -1px hsl(0 0% 0% / 0.1);
+    --shadow-glow: 0 0 20px hsl(262 83% 58% / 0.15);
+    --shadow-accent: 0 4px 16px hsl(262 83% 58% / 0.12);
+
+    --sidebar-background: 40 30% 99%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 200 98% 39%;
+    --sidebar-primary-foreground: 204 100% 97%;
+    --sidebar-accent: 215 24% 26%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 212 26% 83%;
+    --sidebar-ring: 200 98% 39%;
+    --chart-1: 198 93% 59%;
+    --chart-2: 213 93% 67%;
+    --chart-3: 215 20% 65%;
+    --chart-4: 215 16% 46%;
+    --chart-5: 215 19% 34%;
+    --sidebar: 210 40% 98%;
+    --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+    --font-serif: 'Lora', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+    --font-mono: 'Space Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+    --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+    --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+    --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
+    --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
+    --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
+    --tracking-normal: 0em;
+    --spacing: 0.25rem;
+  }
+
+  .dark {
+    /* Dark mode - Rich and warm */
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
+
+    --card: 217 32% 17%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 215 24% 26%;
+    --popover-foreground: 210 40% 98%;
+
+    /* Primary - Brighter violet in dark mode */
+    --primary: 198 93% 59%;
+    --primary-foreground: 204 80% 15%;
+
+    /* Secondary - Warm dark */
+    --secondary: 212 26% 83%;
+    --secondary-foreground: 228 84% 4%;
+
+    --muted: 215 16% 46%;
+    --muted-foreground: 210 40% 98%;
+
+    /* Accent - Subtle violet */
+    --accent: 228 84% 4%;
+    --accent-foreground: 215 20% 65%;
+
+    --success: 158 60% 48%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 88% 55%;
+    --warning-foreground: 38 92% 10%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 85% 97%;
+
+    --border: 215 19% 34%;
+    --input: 215 19% 34%;
+    --ring: 198 93% 59%;
+
+    /* Dark mode gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(262 85% 68%) 0%, hsl(280 70% 60%) 100%);
+    --gradient-surface: linear-gradient(180deg, hsl(30 15% 8%) 0%, hsl(30 12% 10%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(30 15% 8%) 0%, hsl(262 30% 12%) 50%, hsl(30 12% 9%) 100%);
+
+    --shadow-glow: 0 0 24px hsl(262 85% 68% / 0.2);
+    --shadow-accent: 0 4px 20px hsl(262 85% 68% / 0.15);
+
+    --sidebar-background: 30 12% 10%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 198 93% 59%;
+    --sidebar-primary-foreground: 204 80% 15%;
+    --sidebar-accent: 215 20% 65%;
+    --sidebar-accent-foreground: 228 84% 4%;
+    --sidebar-border: 215 19% 34%;
+    --sidebar-ring: 198 93% 59%;
+    --chart-1: 199 95% 73%;
+    --chart-2: 211 96% 78%;
+    --chart-3: 215 20% 65%;
+    --chart-4: 215 16% 46%;
+    --chart-5: 215 19% 34%;
+    --sidebar: 217 32% 17%;
+    --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+    --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+    --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
+    --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
+    --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 2px 4px -1px hsl(0 0% 0% / 0.1);
+    --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 4px 6px -1px hsl(0 0% 0% / 0.1);
+    --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
+    --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    background: var(--gradient-surface);
+    min-height: 100vh;
+  }
+}
+
+/* Utility classes */
+@layer utilities {
+  .gradient-text {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .gradient-border {
+    position: relative;
+  }
+
+  .gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: var(--gradient-primary);
+    -webkit-mask: 
+      linear-gradient(#fff 0 0) content-box, 
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  .glow {
+    box-shadow: var(--shadow-glow);
+  }
+
+  .glow-accent {
+    box-shadow: var(--shadow-accent);
+  }
+
+  .hover-lift {
+    @apply transition-all duration-200 ease-out;
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  /* Status pills */
+  .pill-success {
+    @apply bg-success/10 text-success border-success/20;
+  }
+
+  .pill-warning {
+    @apply bg-warning/10 text-warning border-warning/20;
+  }
+
+  .pill-primary {
+    @apply bg-primary/10 text-primary border-primary/20;
+  }
+
+  /* Smooth focus states */
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+}
