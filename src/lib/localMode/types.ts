@@ -1,3 +1,4 @@
+
 export type LocalContentPart =
   | { type: "text"; text: string }
   | { type: "image_url"; image_url: { url: string } };
@@ -50,3 +51,64 @@ export interface LocalProvider {
   reset: (agent: LocalAgent) => void;
   delete: (agent: LocalAgent) => void;
 }
+
+// --- Deliberation Mode Types ---
+
+export type AgentIdentity = {
+  agentId: string;      // internal stable id
+  personaId: string;    // short label: "Planner"
+  personaTitle?: string; // optional: "Architect Planner"
+  modelId: string;      // "qwen2.5-32b"
+  provider: string;     // "lmstudio"
+};
+
+export type ChatMessage = {
+  id: string;
+  deliberationId?: string;
+  sessionId: string;
+  role: "user" | "agent" | "system";
+  visibility: "broadcast" | "private";
+  toAgentId?: string;   // only for private
+  fromAgentId?: string; // for agent messages
+  personaId?: string;   // denormalized for rendering speed
+  content: string;
+  createdAt: number;
+  meta?: {
+    modelId?: string;
+    provider?: string;
+    round?: number;
+  };
+};
+
+export type DeliberationStatus = "idle" | "running" | "paused" | "completed" | "stopped";
+
+export type AgentConfig = AgentIdentity & {
+  systemPrompt?: string;
+  params?: LocalSamplingParams;
+};
+
+export type Round = {
+  roundNumber: number;
+  messages: ChatMessage[];
+  status: "active" | "completed";
+  summary?: string;
+};
+
+export type ConsensusResult = {
+  content: string;
+  confidence?: number;
+  reachedAt: number;
+};
+
+export type Deliberation = {
+  id: string;
+  sessionId: string;
+  task: string;
+  agents: AgentConfig[];
+  maxRounds: number;
+  currentRound: number;
+  status: DeliberationStatus;
+  rounds: Round[];
+  consensus?: ConsensusResult;
+  createdAt: number;
+};

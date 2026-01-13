@@ -46,7 +46,9 @@ import DeepResearchButton from "@/components/DeepResearchButton";
 import RoutingIntelligenceLightbox from "@/components/RoutingIntelligenceLightbox";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import {
+import { useDeliberation } from "@/hooks/useDeliberation";
+import { DeliberationView } from "@/components/DeliberationView";
+import { 
   getExecutionMode,
   getLocalModeConfig,
   fetchLocalModelCatalog,
@@ -55,6 +57,7 @@ import {
   type LocalContentPart,
   type LocalMessage,
   type LocalModelInfo,
+  type AgentIdentity
 } from "@/lib/localMode";
 import { DEFAULT_STARTER_PROMPTS } from "@/constants/prompts";
 import { SLOT_PERSONALITIES } from "@/lib/constants";
@@ -130,6 +133,69 @@ const ModelMix = () => {
   const localModeConfig = useMemo(() => getLocalModeConfig(executionMode), [executionMode]);
   const isLocalMode = localModeConfig.enabled;
   const localOrchestratorRef = useRef<LocalModeOrchestrator | null>(null);
+  const [orchestrator, setOrchestrator] = useState<LocalModeOrchestrator | null>(null);
+  
+  const { 
+    state: deliberationState, 
+    startDeliberation, 
+    stopDeliberation, 
+    isDeliberating,
+    engine: deliberationEngine,
+  } = useDeliberation(orchestrator);
+
+  const deliberationAgents = useMemo(() => deliberationState?.agents || [], [deliberationState]);
+
+  const [isDeliberationModeEnabled, setIsDeliberationModeEnabled] = useState(false);
+  const lastProcessedDeliberationId = useRef<string | null>(null);
+
+  // Handle Deliberation Completion
+  useEffect(() => {
+    if (deliberationState?.status === "completed" && deliberationState.id !== lastProcessedDeliberationId.current) {
+      lastProcessedDeliberationId.current = deliberationState.id;
+      
+      // Get the last message or consensus
+      // For now, let's use the last message from the last round as the "result"
+      // Ideally, we should have a specific consensus field
+      const lastRound = deliberationState.rounds[deliberationState.rounds.length - 1];
+      const lastMessage = lastRound?.messages[lastRound.messages.length - 1];
+      
+      if (lastMessage) {
+        const resultText = `**Deliberation Result:**\n\n${lastMessage.content}`;
+        
+        // Add to main chat
+        const resultResponse: ChatResponse = {
+          id: `deliberation-${deliberationState.id}`,
+          model: "deliberation-engine",
+          modelName: "Deliberation Consensus",
+          prompt: deliberationState.task,
+          response: resultText,
+          timestamp: new Date().toISOString(),
+          roundIndex: prompts.length // New round
+        };
+
+        // If this was the first interaction, we need to set the prompt too
+        if (!conversationStarted) {
+           setPrompts([deliberationState.task]);
+           setResponses([resultResponse]);
+           setConversationStarted(true);
+        } else {
+           setPrompts(prev => [...prev, deliberationState.task]); // Or just append response to current?
+           // Actually, if we are in the middle of a convo, we might want to just append the response
+           // But 'responses' array usually matches 'prompts' array by index for rounds.
+           // So we should add a prompt entry too.
+           setResponses(prev => [...prev, resultResponse]);
+        }
+        
+        toast({
+          title: "Deliberation Completed",
+          description: "Consensus result has been added to the chat.",
+        });
+
+        setIsDeliberationModeEnabled(false);
+      }
+    }
+  }, [deliberationState, conversationStarted, prompts.length]);
+
   const localAgentsRef = useRef<Map<string, { agentId: string; alias: string }>>(new Map());
   
   // Track the actual local model ID to use (fetched from server)
@@ -536,9 +602,11 @@ const ModelMix = () => {
         allowRemote: localModeConfig.allowRemote,
       });
       localOrchestratorRef.current = new LocalModeOrchestrator(provider);
+      setOrchestrator(localOrchestratorRef.current);
       localAgentsRef.current.clear();
     } catch (error) {
       localOrchestratorRef.current = null;
+      setOrchestrator(null);
       localAgentsRef.current.clear();
       toast({
         title: "Local mode initialization failed",
@@ -2087,18 +2155,29 @@ const ModelMix = () => {
     message: string,
     followUpAttachments: Attachment[],
     mentionedModelIds: string[],
-    mode: ReplyMode
+    mode: ReplyMode,
+    targetAgentId?: string
   ) => {
     const activeModels = selectedModels.slice(0, panelCount);
     
-    const hasMentions = mentionedModelIds.length > 0;
-    const isMentionReplyOnly = mode === "mentioned-only" || mode === "private-mentioned";
-    const isPrivate = mode === "private-mentioned" && hasMentions;
+    let targetModels = activeModels;
+    let isPrivate = false;
+    let effectiveVisibleIds = mentionedModelIds;
 
-    const targetModels =
-      hasMentions && isMentionReplyOnly
-        ? activeModels.filter((m) => mentionedModelIds.includes(m))
-        : activeModels;
+    if (targetAgentId) {
+      targetModels = activeModels.filter(m => m === targetAgentId);
+      isPrivate = true;
+      effectiveVisibleIds = [targetAgentId];
+    } else {
+      const hasMentions = mentionedModelIds.length > 0;
+      const isMentionReplyOnly = mode === "mentioned-only" || mode === "private-mentioned";
+      isPrivate = mode === "private-mentioned" && hasMentions;
+
+      targetModels =
+        hasMentions && isMentionReplyOnly
+          ? activeModels.filter((m) => mentionedModelIds.includes(m))
+          : activeModels;
+    }
 
     const loadingState: Record<string, boolean> = {};
     targetModels.forEach((m) => (loadingState[m] = true));
@@ -2108,7 +2187,7 @@ const ModelMix = () => {
     setPrompts((prev) => [...prev, message]);
     setPromptMeta((prev) => [
       ...prev,
-      isPrivate ? { visibility: "mentioned", visibleToModelIds: mentionedModelIds } : { visibility: "public" },
+      isPrivate ? { visibility: "mentioned", visibleToModelIds: effectiveVisibleIds } : { visibility: "public" },
     ]);
 
     const followUpUnsupported = getUnsupportedVisionModels(followUpAttachments);
@@ -2434,6 +2513,43 @@ const ModelMix = () => {
 
   
 
+  const handleStopDeliberation = useCallback(() => {
+    // 1. Capture transcript if available and meaningful
+    if (deliberationState && deliberationState.rounds.length > 0) {
+      const transcript = deliberationState.rounds.flatMap(r => 
+        [`## Round ${r.roundNumber}`, ...r.messages.map(m => 
+          `**${m.personaId || m.fromAgentId}**: ${m.content}`
+        )]
+      ).join("\n\n");
+
+      if (transcript.trim()) {
+        const summaryMessage: ChatResponse = {
+          id: `delib-summary-${Date.now()}`,
+          model: "system-deliberation",
+          modelName: "Deliberation Consensus",
+          prompt: deliberationState.task || "Deliberation Task",
+          response: `### Deliberation Transcript\n\n${transcript}`,
+          timestamp: new Date().toISOString(),
+          roundIndex: prompts.length > 0 ? prompts.length - 1 : 0,
+          isError: false
+        };
+        
+        setResponses(prev => upsertResponseWithTelemetry(prev, summaryMessage));
+        
+        toast({
+          title: "Deliberation Ended",
+          description: "Transcript saved to main chat.",
+        });
+      }
+    }
+
+    // 2. Stop engine
+    stopDeliberation();
+
+    // 3. Switch view
+    setIsDeliberationModeEnabled(false);
+  }, [deliberationState, stopDeliberation, prompts.length, upsertResponseWithTelemetry]);
+
   return (
     <SidebarProvider>
       <AppSidebar
@@ -2515,6 +2631,52 @@ const ModelMix = () => {
                   <span className="hidden sm:inline">New Chat</span>
                 </Button>
 
+                {/* Deliberation Mode Toggle (Local Mode Only) */}
+                {isLocalMode && (
+                  <Button
+                    variant={isDeliberationModeEnabled ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => {
+                      if (isDeliberationModeEnabled) {
+                        handleStopDeliberation();
+                      } else {
+                        setIsDeliberationModeEnabled(true);
+                        if (orchestrator) {
+                          // Define distinct personas for deliberation
+                          const personas = [
+                            { title: "Planner", prompt: "You are a Planner. Break down the task into steps and coordinate the discussion." },
+                            { title: "Critic", prompt: "You are a Critic. Identify potential flaws, risks, and edge cases in the proposed solutions." },
+                            { title: "Synthesizer", prompt: "You are a Synthesizer. Integrate different viewpoints and propose a consolidated solution." }
+                          ];
+                          
+                          const configs: AgentConfig[] = localDefaultModelIds.slice(0, 3).map((id, index) => {
+                             const persona = personas[index % personas.length];
+                             return {
+                               agentId: id, // Placeholder, will be replaced by orchestrator ID
+                               personaId: persona.title,
+                               personaTitle: persona.title,
+                               modelId: resolvedLocalModelId,
+                               provider: "local",
+                               systemPrompt: `${persona.prompt} Keep your responses concise (under 150 tokens) and build upon previous messages.`,
+                               params: {
+                                 max_tokens: 150,
+                                 temperature: 0.7
+                               }
+                             };
+                          });
+
+                          startDeliberation(prompt || "Deliberation Task", configs);
+                        }
+                      }
+                    }}
+                    className="h-8 gap-1.5"
+                    title="Toggle Deliberation Mode"
+                  >
+                    <Zap className="h-4 w-4" />
+                    <span className="hidden sm:inline">Deliberation</span>
+                  </Button>
+                )}
+
                 {/* Settings button */}
                 <Button
                   variant="ghost"
@@ -2555,7 +2717,19 @@ const ModelMix = () => {
           />
         )}
 
-        <main className="container mx-auto px-4">
+        <main className={cn("container mx-auto px-4", isDeliberationModeEnabled && "h-[calc(100vh-8rem)]")}>
+        {isDeliberationModeEnabled ? (
+            <div className="h-full py-4">
+              <DeliberationView 
+                state={deliberationState}
+                onPause={() => deliberationEngine?.pause()}
+                onResume={() => deliberationEngine?.resume()}
+                onStop={handleStopDeliberation}
+                onAdvance={() => deliberationEngine?.advanceRound()}
+              />
+            </div>
+          ) : (
+            <>
         {/* Hero / Initial Prompt - Clean, focused first impression */}
         {!conversationStarted && (
           <div className="max-w-3xl mx-auto pt-4 pb-8 md:pt-10 md:pb-12">
@@ -2884,13 +3058,15 @@ const ModelMix = () => {
             );
           })}
         </div>
+        </>
+        )}
       </main>
 
-      {/* Reply Panel - Only shown after conversation starts */}
-      {conversationStarted && (
+      {/* Reply Panel - Shown if conversation started OR deliberation active */}
+      {(conversationStarted || isDeliberationModeEnabled) && (
         <ReplyPanel
-          onSend={handleFollowUp}
-          isLoading={isAnyLoading}
+          onSend={isDeliberationModeEnabled ? handleDeliberationInput : handleFollowUp}
+          isLoading={isAnyLoading} // Deliberation doesn't use this loading state yet, maybe fix later
           unsupportedModels={unsupportedVisionModels}
           availableModels={selectedModels.slice(0, panelCount).map((id, index) => ({
             id,
@@ -2901,6 +3077,7 @@ const ModelMix = () => {
           onDeepResearchClick={() => setShowDeepResearch(true)}
           onSwapModel={handleSwapModelForVision}
           onRemoveModelSlot={handleRemoveModelSlot}
+          agents={isDeliberationModeEnabled ? deliberationAgents : undefined}
         />
       )}
       

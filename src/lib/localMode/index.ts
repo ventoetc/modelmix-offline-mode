@@ -16,5 +16,14 @@ export type {
   LocalSamplingParams,
   LocalSendResult,
   LocalProvider,
+  AgentIdentity,
+  ChatMessage,
+  Deliberation,
+  DeliberationStatus,
+  AgentConfig,
+  Round,
+  ConsensusResult
 } from "./types";
 export type { LocalModelInfo } from "./config";
+export { DeliberationEngine } from "./deliberationEngine";
+export { DeliberationRunner } from "./deliberationRunner";

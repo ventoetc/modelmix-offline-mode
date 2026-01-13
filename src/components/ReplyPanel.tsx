@@ -5,13 +5,16 @@ import AttachmentInput, { Attachment, UnsupportedModelInfo } from "@/components/
 import FollowUpShortcuts from "@/components/FollowUpShortcuts";
 import MentionInput, { MentionedModel } from "@/components/MentionInput";
 import ReplyModeSelector, { ReplyMode } from "@/components/ReplyModeSelector";
+import { RoutingPicker } from "@/components/RoutingPicker";
+import { AgentIdentity } from "@/lib/localMode/types";
 
 interface ReplyPanelProps {
   onSend: (
     message: string,
     attachments: Attachment[],
     mentionedModels: string[],
-    mode: ReplyMode
+    mode: ReplyMode,
+    targetAgentId?: string
   ) => Promise<void>;
   isLoading: boolean;
   unsupportedModels?: UnsupportedModelInfo[];
@@ -19,6 +22,7 @@ interface ReplyPanelProps {
   onDeepResearchClick?: () => void;
   onSwapModel?: (oldModelId: string, newModelId: string) => void;
   onRemoveModelSlot?: (modelId: string) => void;
+  agents?: AgentIdentity[];
 }
 
 const ReplyPanel = ({
@@ -29,12 +33,14 @@ const ReplyPanel = ({
   onDeepResearchClick,
   onSwapModel,
   onRemoveModelSlot,
+  agents,
 }: ReplyPanelProps) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [message, setMessage] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [mentionedModels, setMentionedModels] = useState<MentionedModel[]>([]);
   const [replyMode, setReplyMode] = useState<ReplyMode>("all");
+  const [targetAgentId, setTargetAgentId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (mentionedModels.length === 0) {
@@ -142,11 +148,13 @@ const ReplyPanel = ({
       message,
       attachments,
       mentionedIds,
-      mode
+      mode,
+      targetAgentId
     );
     setMessage("");
     setAttachments([]);
     setMentionedModels([]);
+    setTargetAgentId(undefined);
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -215,12 +223,21 @@ const ReplyPanel = ({
               />
             </div>
             
-            <ReplyModeSelector
-              mode={replyMode}
-              onModeChange={setReplyMode}
-              mentionedCount={mentionedModels.length}
-              disabled={isLoading}
-            />
+            {agents && agents.length > 0 ? (
+              <RoutingPicker
+                agents={agents}
+                selectedAgentId={targetAgentId}
+                onSelect={setTargetAgentId}
+                disabled={isLoading}
+              />
+            ) : (
+              <ReplyModeSelector
+                mode={replyMode}
+                onModeChange={setReplyMode}
+                mentionedCount={mentionedModels.length}
+                disabled={isLoading}
+              />
+            )}
             <Button
               onClick={handleSubmit}
               size="icon"
