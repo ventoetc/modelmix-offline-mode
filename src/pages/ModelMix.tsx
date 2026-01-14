@@ -900,7 +900,35 @@ const ModelMix = () => {
 
     // Execute requests
     try {
-      if (isLocalMode && localOrchestratorRef.current) {
+      if (isLocalMode) {
+        // Local mode (offline-first) - never fall back to cloud
+        if (!localOrchestratorRef.current) {
+          // Orchestrator not initialized - show error
+          const errorMessage = !localModeConfig.isValid
+            ? localModeConfig.error || "Local mode configuration is invalid."
+            : "Local mode is not initialized. Please ensure your local AI server is running.";
+
+          toast({
+            title: "Local Mode Error",
+            description: errorMessage,
+            variant: "destructive",
+          });
+
+          const errorResponses: ChatResponse[] = activeModelIds.map(modelId => ({
+            id: generateUUID(),
+            model: modelId,
+            modelName: localModeConfig.modelLabel,
+            prompt: text,
+            response: `**Local Mode Error**\n\n${errorMessage}\n\nPlease check:\n- Your local AI server (e.g., LMStudio) is running\n- The server is accessible at ${localModeConfig.baseUrl}\n- A model is loaded in your local server`,
+            timestamp: new Date().toISOString(),
+            roundIndex: newRoundIndex,
+            isError: true,
+          }));
+
+          setResponses(prev => [...prev, ...errorResponses]);
+          return;
+        }
+
         // Local mode execution
         const requests = activeModelIds.map(async (modelId, index) => {
           try {
