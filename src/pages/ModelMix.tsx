@@ -1250,6 +1250,64 @@ const ModelMix = () => {
            
            <div className="flex items-center gap-2">
               {/* ... Right side controls ... */}
+
+              {/* Deliberation Mode Toggle (Local Mode Only) */}
+              {isLocalMode && orchestrator && (
+                <Button
+                  variant={isDeliberationModeEnabled ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => {
+                    if (isDeliberationModeEnabled) {
+                      stopDeliberation();
+                      setIsDeliberationModeEnabled(false);
+                      toast({
+                        title: "Deliberation Mode Disabled",
+                        description: "Returning to normal chat mode",
+                      });
+                    } else {
+                      setIsDeliberationModeEnabled(true);
+
+                      // Auto-start with predefined personas
+                      const personas = [
+                        { title: "Planner", prompt: "You are a Planner. Break down tasks into steps and coordinate discussion. Keep responses under 150 tokens." },
+                        { title: "Critic", prompt: "You are a Critic. Identify flaws, risks, and edge cases. Keep responses under 150 tokens." },
+                        { title: "Synthesizer", prompt: "You are a Synthesizer. Integrate viewpoints and propose consolidated solutions. Keep responses under 150 tokens." }
+                      ];
+
+                      const activeModels = selectedModels.slice(0, Math.min(panelCount, 3));
+                      const configs = activeModels.map((modelId, idx) => {
+                        const persona = personas[idx % personas.length];
+                        return {
+                          personaId: persona.title.toLowerCase(),
+                          personaTitle: persona.title,
+                          systemPrompt: persona.prompt,
+                          modelId: resolvedLocalModelId || "local-model",
+                          params: {
+                            max_tokens: 150,
+                            temperature: 0.7
+                          }
+                        };
+                      });
+
+                      startDeliberation(
+                        prompt || "Discuss and reach consensus on the task",
+                        configs
+                      );
+
+                      toast({
+                        title: "Deliberation Mode Activated",
+                        description: "Multi-agent discussion started",
+                      });
+                    }
+                  }}
+                  className="h-8 gap-1.5"
+                  title="Toggle Deliberation Mode - Multi-agent consensus building"
+                >
+                  <Zap className="h-4 w-4" />
+                  <span className="hidden sm:inline">Deliberation</span>
+                </Button>
+              )}
+
               <Button variant="ghost" size="icon" onClick={() => setShowSettings(true)}>
                 <Settings className="h-5 w-5" />
               </Button>
@@ -1257,8 +1315,25 @@ const ModelMix = () => {
         </header>
 
         {/* Main Content Area */}
-        {/* ... */}
-        
+        {isDeliberationModeEnabled ? (
+          <div className="flex-1 h-full py-4 px-4 overflow-hidden">
+            <DeliberationView
+              state={deliberationState}
+              onPause={() => deliberationEngine?.pause()}
+              onResume={() => deliberationEngine?.resume()}
+              onStop={() => {
+                stopDeliberation();
+                setIsDeliberationModeEnabled(false);
+                toast({
+                  title: "Deliberation Stopped",
+                  description: "Returning to normal chat mode",
+                });
+              }}
+              onAdvance={() => deliberationEngine?.advanceRound()}
+            />
+          </div>
+        ) : (
+          <>
         {/* Chat Panels Grid */}
         <div className={`grid gap-4 ${getGridCols()}`}>
           {Array.from({ length: panelCount }).map((_, index) => {
@@ -1343,6 +1418,8 @@ const ModelMix = () => {
           agents={isDeliberationModeEnabled ? deliberationAgents : undefined}
         />
       )}
+      </>
+        )}
 
       {/* Settings Modal */}
       <SettingsModal
