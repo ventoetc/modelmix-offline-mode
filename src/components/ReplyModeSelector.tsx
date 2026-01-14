@@ -1,3 +1,4 @@
+import { Lock } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -24,6 +25,19 @@ const ReplyModeSelector = ({
   // Only show if there are mentioned models
   if (mentionedCount === 0) return null;
 
+  // If strict 1:1, show static badge
+  if (mentionedCount === 1) {
+    return (
+        <div className="h-[50px] w-[110px] px-3 flex flex-col justify-center gap-1 bg-muted/50 border rounded-md cursor-not-allowed" title="1:1 conversations are always private">
+            <div className="flex items-center gap-1.5 text-primary">
+                <Lock className="h-3 w-3" />
+                <span className="text-xs font-medium">Private</span>
+            </div>
+            <span className="text-[10px] text-muted-foreground leading-none">1:1 Isolated</span>
+        </div>
+    );
+  }
+
   return (
     <Select
       value={mode}
@@ -41,7 +55,7 @@ const ReplyModeSelector = ({
           Only @{mentionedCount}
         </SelectItem>
         <SelectItem value="private-mentioned" className="text-xs">
-          Private to @{mentionedCount}
+          {mentionedCount === 1 ? "1:1 Private (Isolated)" : `Private to @${mentionedCount}`}
         </SelectItem>
       </SelectContent>
     </Select>

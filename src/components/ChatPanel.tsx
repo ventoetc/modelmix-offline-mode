@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronDown, ChevronUp, Maximize2, Loader2, ImageIcon, Copy, Volume2, VolumeX, Settings2, RefreshCw, AlertCircle, X, MessageSquare, Eye, Lock, MoreHorizontal, FileText, Pencil } from "lucide-react";
+import { ChevronDown, ChevronUp, Maximize2, Loader2, ImageIcon, Copy, Volume2, VolumeX, Settings2, RefreshCw, AlertCircle, X, MessageSquare, Eye, Lock, MoreHorizontal, FileText, Save, Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -137,12 +137,11 @@ interface ChatPanelProps {
   hasMultipleTurns?: boolean;
   systemPrompt?: string;
   onSystemPromptChange?: (prompt: string) => void;
-  customName?: string;
-  onRename?: (name: string) => void;
-  savedPersonas?: Array<{ label: string; value: string }>;
-  onSavePersona?: (label: string, value: string) => void;
   activePersonaLabel?: string | null;
   onActivePersonaLabelChange?: (label: string | null) => void;
+  savedPersonas?: Array<{ id: string; name: string; prompt: string }>;
+  onSavePersona?: (name: string, prompt: string) => void;
+  onDeletePersona?: (id: string) => void;
 }
 
 // Helper: Extract first 3-4 sentences as abstract (longer, more engaging)
@@ -223,28 +222,23 @@ const ChatPanel = ({
   hasMultipleTurns = false,
   systemPrompt,
   onSystemPromptChange,
-  customName,
-  onRename,
-  savedPersonas = [],
-  onSavePersona,
   activePersonaLabel = null,
   onActivePersonaLabelChange,
+  savedPersonas = [],
+  onSavePersona,
+  onDeletePersona,
 }: ChatPanelProps) => {
   const navigate = useNavigate();
   const [showAllModels, setShowAllModels] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
-  const [tempName, setTempName] = useState("");
   const [newPersonaName, setNewPersonaName] = useState("");
-  const [isSavingPersona, setIsSavingPersona] = useState(false);
-  const CUSTOM_PERSONA_VALUE = "__custom__";
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   // Check if current model is a free tier model
   const isCurrentModelFree = FREE_MODEL_IDS.includes(modelId);
 
   // Free tier models only
   const freeModels = useMemo(() => 
-    availableModels.filter(m => FREE_MODEL_IDS.includes(m.id)),
+    (availableModels || []).filter(m => FREE_MODEL_IDS.includes(m.id)),
     [availableModels]
   );
 
@@ -279,8 +273,9 @@ const ChatPanel = ({
 
   // Get top models grouped by vendor for initial view
   const topGroupedModels = useMemo(() => {
-    const topModels = availableModels.filter(m => TOP_MODEL_IDS.includes(m.id));
-    const currentModel = availableModels.find(m => m.id === modelId);
+    const safeAvailableModels = availableModels || [];
+    const topModels = safeAvailableModels.filter(m => TOP_MODEL_IDS.includes(m.id));
+    const currentModel = safeAvailableModels.find(m => m.id === modelId);
     const isCurrentInTop = TOP_MODEL_IDS.includes(modelId);
     
     // Add current model if not in top
@@ -383,45 +378,6 @@ const ChatPanel = ({
       onClick={handleCardClick}
       onDoubleClick={handleDoubleClick}
     >
-      {/* Rename Dialog */}
-      <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
-        <DialogContent onClick={(e) => e.stopPropagation()}>
-          <DialogHeader>
-            <DialogTitle>Rename Model Slot</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <Label htmlFor="slot-name" className="mb-2 block">
-              Display Name
-            </Label>
-            <Input
-              id="slot-name"
-              value={tempName}
-              onChange={(e) => setTempName(e.target.value)}
-              placeholder="e.g. Code Expert"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  onRename?.(tempName);
-                  setIsRenameDialogOpen(false);
-                }
-              }}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsRenameDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                onRename?.(tempName);
-                setIsRenameDialogOpen(false);
-              }}
-            >
-              Save
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Invalid model warning banner */}
       {isInvalid && (
         <div className="bg-destructive/10 border-b border-destructive/30 px-3 py-1.5 flex items-center gap-2 text-xs text-destructive">
@@ -432,11 +388,6 @@ const ChatPanel = ({
       <CardHeader className="pb-2 space-y-0">
         <div className="flex items-center justify-between gap-2 min-w-0">
           <div className="flex flex-col min-w-0 flex-1 overflow-hidden">
-            {customName && (
-              <div className="text-sm font-semibold truncate mb-1 px-1" title={customName}>
-                {customName}
-              </div>
-            )}
             <div className="flex items-center gap-2">
             {isLocked || isAnonymous ? (
               // Locked display (during conversation) or anonymous (fixed model per slot)
@@ -462,6 +413,22 @@ const ChatPanel = ({
                 {isAnonymous && !isLocked && (
                   <Lock className="h-3 w-3 text-muted-foreground shrink-0" />
                 )}
+                {/* Private/Isolated Indicator */}
+                {(isLocked || response?.visibility === 'private' || response?.visibility === 'mentioned') && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-orange-500/10 text-orange-600 border border-orange-500/20">
+                          <Lock className="h-2.5 w-2.5" />
+                          <span className="text-[10px] font-medium">Private</span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">Private Context - Isolated from other models</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
               </div>
             ) : isFreeTier ? (
               // Free tier: dropdown with 7 Lovable AI models
@@ -470,7 +437,7 @@ const ChatPanel = ({
                   <SelectValue placeholder="Choose from 7 models" className="truncate" />
                 </SelectTrigger>
                 <SelectContent className="max-h-[300px] bg-popover z-50">
-                  {freeModels.map((model) => (
+                  {freeModels?.map((model) => (
                     <SelectItem key={model.id} value={model.id}>
                       <span className="flex items-center gap-2">
                         {model.name}
@@ -502,7 +469,7 @@ const ChatPanel = ({
                   {!showAllModels ? (
                     // Show grouped top models
                     <>
-                      {topGroupedModels.map((group) => (
+                      {topGroupedModels?.map((group) => (
                         <SelectGroup key={group.vendor}>
                           <SelectLabel className="text-xs font-semibold text-muted-foreground px-2 py-1.5">
                             {group.vendorDisplayName}
@@ -524,7 +491,7 @@ const ChatPanel = ({
                           })}
                         </SelectGroup>
                       ))}
-                      {availableModels.length > TOP_MODEL_IDS.length && (
+                          {availableModels?.length > TOP_MODEL_IDS.length && (
                         <div 
                           className="px-2 py-2 text-xs text-muted-foreground cursor-pointer hover:bg-muted flex items-center justify-center gap-1 border-t border-border mt-1"
                           onClick={(e) => {
@@ -533,14 +500,14 @@ const ChatPanel = ({
                           }}
                         >
                           <ChevronDown className="h-3 w-3" />
-                          Show all {availableModels.length} models
+                          Show all {availableModels?.length} models
                         </div>
                       )}
                     </>
                   ) : (
                     // Show all models grouped by vendor
                     <>
-                      {groupedModels.map((group) => (
+                      {groupedModels?.map((group) => (
                         <SelectGroup key={group.vendor}>
                           <SelectLabel className="text-xs font-semibold text-muted-foreground px-2 py-1.5 sticky top-0 bg-popover">
                             {group.vendorDisplayName}
@@ -569,38 +536,32 @@ const ChatPanel = ({
             )}
             
             {/* Model reliability indicator */}
-            {reliabilityPercent !== null && reliabilityPercent !== undefined && (
-              <div 
-                className={cn(
-                  "flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium",
-                  reliabilityPercent >= 80 ? "bg-success/10 text-success" :
-                  reliabilityPercent >= 50 ? "bg-warning/10 text-warning" :
-                  "bg-destructive/10 text-destructive"
-                )}
-                title={`Model reliability: ${reliabilityPercent}% success rate`}
-              >
-                <div className={cn(
-                  "w-1.5 h-1.5 rounded-full",
-                  reliabilityPercent >= 80 ? "bg-success" :
-                  reliabilityPercent >= 50 ? "bg-warning" :
-                  "bg-destructive"
-                )} />
-                {reliabilityPercent}%
+            {isLoading && !response ? (
+              <div className="flex items-center gap-2 px-2 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary animate-pulse">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                <span>Processing...</span>
+                <span className="hidden sm:inline opacity-70 border-l border-primary/20 pl-2 ml-1">GPU Active</span>
               </div>
-            )}
-            {onRename && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 ml-1 text-muted-foreground"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsRenameDialogOpen(true);
-                }}
-                title="Rename Slot"
-              >
-                <Pencil className="h-3 w-3" />
-              </Button>
+            ) : (
+              reliabilityPercent !== null && reliabilityPercent !== undefined && (
+                <div 
+                  className={cn(
+                    "flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium",
+                    reliabilityPercent >= 80 ? "bg-success/10 text-success" :
+                    reliabilityPercent >= 50 ? "bg-warning/10 text-warning" :
+                    "bg-destructive/10 text-destructive"
+                  )}
+                  title={`Reliability: ${reliabilityPercent}%`}
+                >
+                  <div className={cn(
+                    "h-1.5 w-1.5 rounded-full",
+                    reliabilityPercent >= 80 ? "bg-success" :
+                    reliabilityPercent >= 50 ? "bg-warning" :
+                    "bg-destructive"
+                  )} />
+                  {reliabilityPercent}%
+                </div>
+              )
             )}
           </div>
         </div>
@@ -623,73 +584,84 @@ const ChatPanel = ({
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-80" onClick={(e) => e.stopPropagation()}>
-                  <div className="space-y-2">
-                    <h4 className="font-medium leading-none">System Prompt</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Override the system prompt for this model.
-                    </p>
-                    <Select
-                      value={activePersonaLabel ?? CUSTOM_PERSONA_VALUE}
-                      onValueChange={(val) => {
-                        if (val === CUSTOM_PERSONA_VALUE) {
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <h4 className="font-medium leading-none">System Prompt</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Override the system prompt for this model.
+                      </p>
+                      <Textarea
+                        value={systemPrompt || ""}
+                        onChange={(e) => {
                           onActivePersonaLabelChange?.(null);
-                          return;
-                        }
+                          onSystemPromptChange?.(e.target.value);
+                        }}
+                        placeholder="Enter a custom system prompt..."
+                        className="min-h-[100px] text-xs"
+                      />
+                    </div>
 
-                        const preset = savedPersonas.find((p) => p.label === val);
-                        if (!preset) return;
-
-                        onActivePersonaLabelChange?.(preset.label);
-                        onSystemPromptChange?.(preset.value);
-                        if (onRename) onRename(preset.label);
-                      }}
-                    >
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder="Select a starter prompt..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectGroup>
-                          <SelectLabel>Presets</SelectLabel>
-                          <SelectItem value={CUSTOM_PERSONA_VALUE} className="text-xs">
-                            Custom
-                          </SelectItem>
-                          {savedPersonas.map((p) => (
-                            <SelectItem key={p.label} value={p.label} className="text-xs">
-                              {p.label}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                    <Textarea
-                      value={systemPrompt || ""}
-                      onChange={(e) => {
-                        onActivePersonaLabelChange?.(null);
-                        onSystemPromptChange?.(e.target.value);
-                      }}
-                      placeholder="Enter a custom system prompt..."
-                      className="h-32 text-xs"
-                    />
                     {onSavePersona && (
-                      <div className="flex gap-2 items-center pt-2 border-t">
-                        <Input 
-                          placeholder="New preset name..." 
-                          value={newPersonaName}
-                          onChange={(e) => setNewPersonaName(e.target.value)}
-                          className="h-8 text-xs"
-                        />
-                        <Button 
-                          size="sm" 
-                          variant="secondary"
-                          className="h-8 text-xs whitespace-nowrap"
-                          disabled={!newPersonaName.trim() || !systemPrompt}
-                          onClick={() => {
-                            onSavePersona(newPersonaName, systemPrompt || "");
-                            setNewPersonaName("");
-                          }}
-                        >
-                          Save
-                        </Button>
+                      <div className="pt-2 border-t space-y-2">
+                        <Label className="text-xs font-medium">Saved Presets</Label>
+                        
+                        {(savedPersonas?.length || 0) > 0 ? (
+                          <div className="max-h-[120px] overflow-y-auto space-y-1 border rounded-md p-1">
+                            {savedPersonas?.map((persona) => (
+                              <div key={persona.id} className="flex items-center justify-between gap-2 p-1.5 hover:bg-muted rounded group text-xs">
+                                <span 
+                                  className="truncate flex-1 cursor-pointer font-medium"
+                                  onClick={() => {
+                                    onSystemPromptChange?.(persona.prompt);
+                                    onActivePersonaLabelChange?.(persona.name);
+                                    toast({ description: `Loaded preset: ${persona.name}` });
+                                  }}
+                                  title={persona.prompt}
+                                >
+                                  {persona.name}
+                                </span>
+                                {onDeletePersona && !persona.isReadOnly && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onDeletePersona(persona.id);
+                                    }}
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-[10px] text-muted-foreground italic">No saved presets yet.</p>
+                        )}
+
+                        <div className="flex gap-2 pt-1">
+                          <Input 
+                            placeholder="New preset name..." 
+                            value={newPersonaName} 
+                            onChange={(e) => setNewPersonaName(e.target.value)}
+                            className="h-7 text-xs" 
+                          />
+                          <Button 
+                            size="sm" 
+                            className="h-7 px-2"
+                            disabled={!newPersonaName.trim() || !systemPrompt?.trim()}
+                            onClick={() => {
+                              if (onSavePersona && newPersonaName.trim() && systemPrompt) {
+                                onSavePersona(newPersonaName, systemPrompt);
+                                setNewPersonaName("");
+                              }
+                            }}
+                          >
+                            <Save className="h-3.5 w-3.5 mr-1" />
+                            Save
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -810,8 +782,22 @@ const ChatPanel = ({
 
       <CardContent className="pt-0">
         {isLoading ? (
-          <div className="flex items-center justify-center py-8">
+          <div className="flex flex-col items-center justify-center py-8 gap-3">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            {modelId.includes("local") || modelId === "local-model" ? (
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-xs text-muted-foreground font-medium animate-pulse">
+                  Processing on local GPU...
+                </span>
+                <span className="text-[10px] text-muted-foreground/70">
+                  This may heat up your device
+                </span>
+              </div>
+            ) : (
+              <span className="text-xs text-muted-foreground animate-pulse">
+                Generating response...
+              </span>
+            )}
           </div>
         ) : response?.isError ? (
           <div className="flex flex-col items-center justify-center py-6 gap-3">
@@ -845,7 +831,7 @@ const ChatPanel = ({
                     Switch to a different model
                   </div>
                   <DropdownMenuSeparator />
-                  {availableModels.slice(0, 15).map((model) => (
+                  {(availableModels || []).slice(0, 15).map((model) => (
                     <DropdownMenuItem
                       key={model.id}
                       onClick={(e) => {

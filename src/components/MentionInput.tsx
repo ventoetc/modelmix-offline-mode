@@ -27,7 +27,7 @@ const MentionInput = ({
   mentionedModels,
   onMentionAdd,
   onMentionRemove,
-  availableModels,
+  availableModels = [],
   placeholder = "Follow-up... (type @ to mention a model)",
   disabled = false,
   onKeyDown,
@@ -87,10 +87,10 @@ const MentionInput = ({
 
   // Handle keyboard navigation in dropdown
   const handleKeyDownInternal = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (showDropdown && filteredModels.length > 0) {
+    if (showDropdown && filteredModels?.length > 0) {
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        setSelectedIndex((prev) => Math.min(prev + 1, filteredModels.length - 1));
+        setSelectedIndex((prev) => Math.min(prev + 1, (filteredModels?.length || 1) - 1));
         return;
       }
       if (e.key === "ArrowUp") {
@@ -100,7 +100,9 @@ const MentionInput = ({
       }
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
-        selectModel(filteredModels[selectedIndex]);
+        if (filteredModels[selectedIndex]) {
+            selectModel(filteredModels[selectedIndex]);
+        }
         return;
       }
       if (e.key === "Escape") {
@@ -110,7 +112,9 @@ const MentionInput = ({
       }
       if (e.key === "Tab") {
         e.preventDefault();
-        selectModel(filteredModels[selectedIndex]);
+        if (filteredModels[selectedIndex]) {
+            selectModel(filteredModels[selectedIndex]);
+        }
         return;
       }
     }
@@ -164,7 +168,6 @@ const MentionInput = ({
         className="min-h-[50px] max-h-[100px] text-sm resize-none pr-2"
       />
       
-      {/* Mentioned models chips */}
       {mentionedModels.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-2">
           {mentionedModels.map((model) => (
@@ -188,7 +191,7 @@ const MentionInput = ({
       )}
 
       {/* Mention dropdown */}
-      {showDropdown && filteredModels.length > 0 && (
+      {showDropdown && filteredModels?.length > 0 && (
         <div
           ref={dropdownRef}
           className="absolute z-50 bg-popover border border-border rounded-md shadow-lg max-h-48 overflow-y-auto w-64"
@@ -197,7 +200,7 @@ const MentionInput = ({
             left: cursorPosition?.left ?? 0,
           }}
         >
-          {filteredModels.slice(0, 8).map((model, index) => (
+          {filteredModels?.slice(0, 8).map((model, index) => (
             <button
               key={model.id}
               type="button"
@@ -207,7 +210,7 @@ const MentionInput = ({
               )}
               onClick={() => selectModel(model)}
             >
-              <span className="font-medium">{model.name}</span>
+              <span className="font-medium">{model.name.replace("LMStudio Model - ", "")}</span>
             </button>
           ))}
         </div>

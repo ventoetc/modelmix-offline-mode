@@ -235,7 +235,7 @@ const SettingsModal = ({
                         ))
                       ) : (
                         <div className="p-2 text-sm text-center text-muted-foreground">
-                          No models detected on local server
+                          No models detected. Is your local server running?
                         </div>
                       )}
                     </SelectContent>

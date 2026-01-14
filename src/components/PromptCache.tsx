@@ -97,149 +97,155 @@ const PromptCache = ({
           <TooltipTrigger asChild>
             <PopoverTrigger asChild>
               <Button
-                variant="ghost"
-                size="icon"
+                variant="secondary"
+                size="sm"
                 className={cn(
-                  "h-8 w-8 shrink-0",
-                  cachedPrompts.length > 0 && "text-primary"
+                  "h-9 gap-2 px-3 transition-all",
+                  cachedPrompts.length > 0 ? "bg-primary/10 text-primary hover:bg-primary/20" : "bg-muted text-muted-foreground hover:bg-muted/80"
                 )}
               >
-                <Bookmark className="h-4 w-4" />
+                <Bookmark className={cn("h-4 w-4", cachedPrompts.length > 0 && "fill-current")} />
+                <span className="hidden sm:inline font-medium">Saved Prompts</span>
+                {cachedPrompts.length > 0 && (
+                  <Badge variant="secondary" className="h-5 px-1.5 min-w-[1.25rem] text-[10px] ml-0.5 bg-background/50">
+                    {cachedPrompts.length}
+                  </Badge>
+                )}
               </Button>
             </PopoverTrigger>
           </TooltipTrigger>
           <TooltipContent side="top">
-            <p>Saved prompts ({cachedPrompts.length})</p>
+            <p>Save and manage your commonly used prompts</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
 
       <PopoverContent 
-        className="w-80 p-0" 
+        className="w-[400px] p-0 shadow-xl" 
         align="start"
         side="top"
       >
-        <div className="p-3 border-b border-border">
-          <div className="flex items-center justify-between mb-2">
-            <h4 className="font-medium text-sm">Prompt Library</h4>
-            <Badge variant="secondary" className="text-xs">
+        <div className="p-4 border-b border-border bg-muted/30">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Bookmark className="h-4 w-4 text-primary fill-primary/20" />
+              <h4 className="font-semibold text-sm">Prompt Library</h4>
+            </div>
+            <Badge variant="outline" className="text-xs font-normal">
               {cachedPrompts.length} saved
             </Badge>
           </div>
           
-          {/* Save current prompt */}
-          {canSave && (
-            <div className="mb-2">
-              {showSaveInput ? (
-                <div className="flex gap-1.5">
-                  <Input
-                    value={saveTitle}
-                    onChange={(e) => setSaveTitle(e.target.value)}
-                    placeholder="Title (optional)"
-                    className="h-8 text-xs"
-                    onKeyDown={(e) => e.key === "Enter" && handleSave()}
-                    autoFocus
-                  />
-                  <Button size="sm" className="h-8 px-2" onClick={handleSave}>
-                    Save
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full h-8 text-xs"
-                  onClick={() => setShowSaveInput(true)}
-                >
-                  <BookmarkPlus className="h-3.5 w-3.5 mr-1.5" />
-                  Save current prompt
-                </Button>
-              )}
+          {/* Save current prompt - Always visible if can save */}
+          {canSave ? (
+            <div className="flex gap-2 mb-3">
+              <Input
+                value={saveTitle}
+                onChange={(e) => setSaveTitle(e.target.value)}
+                placeholder={`Name for: "${currentPrompt.slice(0, 20)}..."`}
+                className="h-8 text-xs bg-background"
+                onKeyDown={(e) => e.key === "Enter" && handleSave()}
+              />
+              <Button size="sm" className="h-8 px-3 shrink-0" onClick={handleSave}>
+                <BookmarkPlus className="h-3.5 w-3.5 mr-1.5" />
+                Save
+              </Button>
+            </div>
+          ) : (
+            <div className="mb-3 text-xs text-muted-foreground italic flex items-center gap-1.5 px-1">
+              <div className="h-1 w-1 rounded-full bg-muted-foreground/50" />
+              Type in the chat box to save a new prompt
             </div>
           )}
 
           {/* Search */}
-          {cachedPrompts.length > 3 && (
+          {(cachedPrompts.length > 3 || search) && (
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search prompts..."
-                className="h-8 pl-8 text-xs"
+                placeholder="Search your prompts..."
+                className="h-8 pl-8 text-xs bg-background"
               />
             </div>
           )}
         </div>
 
         {/* Prompt list */}
-        <ScrollArea className="h-[240px]">
+        <ScrollArea className="h-[300px]">
           {sortedPrompts.length === 0 ? (
-            <div className="p-4 text-center text-muted-foreground">
-              <Bookmark className="h-8 w-8 mx-auto mb-2 opacity-40" />
-              <p className="text-sm">No saved prompts</p>
-              <p className="text-xs mt-1">Save prompts to quickly reuse them</p>
+            <div className="flex flex-col items-center justify-center h-[200px] text-muted-foreground p-4">
+              <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
+                <Bookmark className="h-6 w-6 opacity-40" />
+              </div>
+              <p className="text-sm font-medium">No saved prompts</p>
+              <p className="text-xs mt-1 text-center max-w-[200px]">
+                Save prompts you use frequently to access them quickly later.
+              </p>
             </div>
           ) : (
-            <div className="p-1.5">
+            <div className="p-2 space-y-1">
               {sortedPrompts.map((prompt) => (
                 <div
                   key={prompt.id}
                   className={cn(
-                    "group p-2 rounded-md hover:bg-accent cursor-pointer transition-colors",
-                    prompt.isFavorite && "bg-primary/5"
+                    "group relative flex items-start gap-3 p-3 rounded-lg hover:bg-accent cursor-pointer transition-all border border-transparent hover:border-border/50",
+                    prompt.isFavorite && "bg-primary/5 border-primary/10"
                   )}
                   onClick={() => handleSelect(prompt)}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        {prompt.isFavorite && (
-                          <Star className="h-3 w-3 text-yellow-500 fill-yellow-500 shrink-0" />
-                        )}
-                        <p className="text-sm font-medium truncate">
-                          {prompt.title}
-                        </p>
-                      </div>
-                      <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
-                        {prompt.text}
-                      </p>
-                      <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
-                        <span className="flex items-center gap-0.5">
-                          <Clock className="h-2.5 w-2.5" />
-                          {new Date(prompt.createdAt).toLocaleDateString()}
-                        </span>
-                        <span>Used {prompt.usageCount}x</span>
-                      </div>
+                  {/* Favorite Toggle */}
+                  <div 
+                    className={cn(
+                      "mt-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity",
+                      prompt.isFavorite && "opacity-100"
+                    )}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleFavorite(prompt.id);
+                    }}
+                  >
+                    <Star className={cn(
+                      "h-4 w-4 hover:scale-110 transition-transform",
+                      prompt.isFavorite ? "text-yellow-500 fill-yellow-500" : "text-muted-foreground hover:text-yellow-500"
+                    )} />
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2 mb-0.5">
+                      <span className="font-medium text-sm truncate text-foreground">
+                        {prompt.title}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground shrink-0 tabular-nums bg-muted/50 px-1.5 py-0.5 rounded">
+                        Used {prompt.usageCount}x
+                      </span>
                     </div>
-                    
-                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onToggleFavorite(prompt.id);
-                        }}
-                      >
-                        <Star className={cn(
-                          "h-3 w-3",
-                          prompt.isFavorite ? "text-yellow-500 fill-yellow-500" : "text-muted-foreground"
-                        )} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 text-destructive hover:text-destructive"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDeletePrompt(prompt.id);
-                        }}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
+                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                      {prompt.text}
+                    </p>
+                    <div className="flex items-center gap-3 mt-2 text-[10px] text-muted-foreground/70">
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {new Date(prompt.createdAt).toLocaleDateString()}
+                      </span>
                     </div>
+                  </div>
+                  
+                  {/* Delete Action */}
+                  <div className="absolute right-2 bottom-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeletePrompt(prompt.id);
+                      }}
+                      title="Delete prompt"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
                 </div>
               ))}
