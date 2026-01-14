@@ -1343,6 +1343,64 @@ const ModelMix = () => {
           agents={isDeliberationModeEnabled ? deliberationAgents : undefined}
         />
       )}
+
+      {/* Settings Modal */}
+      <SettingsModal
+        open={showSettings}
+        onOpenChange={setShowSettings}
+        balance={balance}
+        isRegistered={isRegistered}
+        referralCode={referralCode}
+        getReferralLink={getReferralLink}
+        refreshBalance={refreshBalance}
+        systemPrompt={systemPrompt}
+        onSystemPromptChange={setSystemPrompt}
+        user={user}
+        onSignOut={signOut}
+        isAdmin={isAdmin}
+        isLocalMode={isLocalMode}
+        onNavigateAdmin={() => navigate('/admin')}
+        modelHealth={modelHealth}
+        failedModels={failedModels}
+        onClearHealth={() => {
+          setModelHealth({});
+          localStorage.removeItem("arena-model-health");
+          toast({ title: "Health stats cleared" });
+        }}
+        onClearFailed={() => {
+          setFailedModels(new Set());
+          toast({ title: "Failed models list cleared" });
+        }}
+        localModelId={resolvedLocalModelId}
+        onLocalModelIdChange={(nextId) => {
+          setResolvedLocalModelId(nextId);
+          resolvedLocalModelIdRef.current = nextId;
+          const key = "modelmix-local-mode";
+          const raw = localStorage.getItem(key);
+          const parsed = raw ? JSON.parse(raw) : {};
+          localStorage.setItem(key, JSON.stringify({ ...parsed, model: nextId }));
+        }}
+        onRefreshLocalModelId={refreshLocalModels}
+        localModels={localModels}
+        onToggleMode={() => {
+          const newMode = isLocalMode ? "cloud" : "local";
+          const confirmation = confirm(
+            isLocalMode
+              ? "Switch to Cloud Mode? This will require an internet connection and use cloud-based AI models."
+              : "Switch to Local Mode? This requires a running local AI server (e.g., LMStudio) and will work offline."
+          );
+          if (confirmation) {
+            // Store mode preference
+            localStorage.setItem("modelmix-execution-mode", newMode);
+            toast({
+              title: `Switching to ${newMode === "local" ? "Local" : "Cloud"} Mode`,
+              description: "Reloading the page...",
+            });
+            // Reload to apply the mode change
+            setTimeout(() => window.location.reload(), 1000);
+          }
+        }}
+      />
       </main>
     </div>
     </SidebarProvider>
