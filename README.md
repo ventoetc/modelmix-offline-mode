@@ -69,17 +69,20 @@ ModelMix is a multi-panel chat interface that allows users to query up to 10 AI 
 │   │   ├── ResponseLightbox.tsx   # Full response viewer
 │   │   ├── RoundNavigator.tsx     # Navigate response rounds
 │   │   ├── MarkdownRenderer.tsx   # Markdown with syntax highlighting
+│   │   ├── DeliberationView.tsx   # Multi-agent deliberation UI
+│   │   ├── RoutingPicker.tsx      # Agent message routing
 │   │   ├── WaitlistCounter.tsx    # Real-time waitlist count
 │   │   ├── SocialShareButtons.tsx # Social sharing
 │   │   ├── FrictionReporter.tsx   # Inline feedback widget
 │   │   ├── PrivacyBanner.tsx      # Cookie consent
-│   │   ├── SettingsDrawer.tsx     # User settings panel
+│   │   ├── SettingsModal.tsx      # User settings panel
 │   │   └── ...
 │   │
 │   ├── hooks/
 │   │   ├── useAuth.tsx            # Authentication context
 │   │   ├── useCredits.ts          # Credit balance management
 │   │   ├── useOpenRouterModels.ts # Fetch available models
+│   │   ├── useDeliberation.ts     # Multi-agent deliberation
 │   │   ├── useWaitlistCount.ts    # Real-time waitlist counter
 │   │   ├── useAdmin.ts            # Admin role check
 │   │   └── useActionTracker.ts    # Shadow event tracking
@@ -102,7 +105,14 @@ ModelMix is a multi-panel chat interface that allows users to query up to 10 AI 
 │   │
 │   ├── lib/
 │   │   ├── utils.ts               # Utility functions (cn, etc.)
-│   │   └── fingerprint.ts         # Browser fingerprinting
+│   │   ├── fingerprint.ts         # Browser fingerprinting
+│   │   └── localMode/             # Local mode & deliberation
+│   │       ├── config.ts          # Local mode configuration
+│   │       ├── provider.ts        # OpenAI-compatible provider
+│   │       ├── orchestrator.ts    # Agent orchestration
+│   │       ├── deliberationEngine.ts  # Deliberation state machine
+│   │       ├── deliberationRunner.ts  # Async deliberation loop
+│   │       └── types.ts           # Type definitions
 │   │
 │   └── index.css                  # Global styles & design tokens
 │
@@ -172,7 +182,28 @@ ModelMix is a multi-panel chat interface that allows users to query up to 10 AI 
 - **Friction signals**: rephrase, clarify, abandon, tone shift
 - **Upgrade triggers**: based on usage patterns
 
-### 7. Admin Dashboard
+### 7. Deliberation Mode ⚡ (Local Mode Only)
+
+- **Multi-agent consensus building** with distinct AI personas
+- **Iterative refinement** over multiple rounds (up to 6)
+- **Real-time transcript** showing agent discussions
+- **Pause/Resume/Stop** controls for managing deliberation
+- **Automatic consensus** posting to main chat
+- **Three default personas**:
+  - 🎯 **Planner**: Breaks down tasks, coordinates discussion
+  - 🔍 **Critic**: Identifies flaws, risks, and edge cases
+  - 🔄 **Synthesizer**: Integrates viewpoints, builds consensus
+
+**How it works:**
+1. Switch to Local Mode with LMStudio/Ollama running
+2. Click the ⚡ "Deliberation" button in the header
+3. Type your task (e.g., "Design a REST API for a todo app")
+4. Watch agents discuss and refine ideas over multiple rounds
+5. Final consensus automatically posted to your chat
+
+See `DELIBERATION_MODE_GUIDE.md` for complete documentation.
+
+### 8. Admin Dashboard
 
 - **User management**: View users, adjust credits
 - **Waitlist management**: View entries, send invites, export
@@ -490,7 +521,7 @@ Founder provisioning:
 
 ### Local Mode (Offline/Private)
 
-To run ModelMix in local mode (e.g., with LMStudio), add the following to your `.env`:
+To run ModelMix in local mode (e.g., with LMStudio or Ollama), add the following to your `.env`:
 
 ```env
 VITE_EXECUTION_MODE="local"
@@ -506,6 +537,18 @@ VITE_LOCAL_ALLOW_REMOTE="true"
 3. Go to the **Local Server** tab (double-arrow icon).
 4. Start the server on port `1234` (default).
 5. Ensure CORS is enabled if you encounter connection issues (usually enabled by default).
+
+**Local Mode Features:**
+- ✅ **100% Offline** - No internet required once model is loaded
+- ✅ **Privacy-First** - All processing happens on your machine
+- ✅ **Deliberation Mode** - Multi-agent consensus building (⚡ button in header)
+- ✅ **Mode Toggle** - Switch between local and cloud via Settings (⚙️)
+
+**Toggle Between Modes:**
+1. Click Settings (⚙️) in the header
+2. Find "Execution Mode" section
+3. Click "Switch to Cloud" or "Switch to Local"
+4. Confirm and page will reload in new mode
 
 ### Cloud Mode (Default)
 
