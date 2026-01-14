@@ -957,14 +957,129 @@ const ModelMix = () => {
 
         setResponses(prev => [...prev, ...newResponses]);
       } else {
-        // Remote mode (mock for now as real implementation is in original file)
-        // ... (preserving existing logic implicitly by not changing it if I were editing, 
-        // but since I am WRITING the file I need to include the rest of the logic or ensure I'm not breaking it.
-        // Wait, I am using WRITE tool on the WHOLE file? No, I should use SearchReplace for the persona part.
-        // Ah, I am using Write tool on ModelMix.tsx?
-        // NO, I SHOULD NOT WRITE THE WHOLE FILE IF I CAN AVOID IT.
-        // The file is huge.
-        // I will use SearchReplace for ModelMix.tsx as well.
+        // Cloud/Remote mode execution using Supabase Edge Functions
+        const { supabase } = await import("@/integrations/supabase/client");
+        const { data: { session } } = await supabase.auth.getSession();
+        const authToken = session?.access_token;
+
+        const requests = activeModelIds.map(async (modelId, index) => {
+          try {
+            const personaName = modelPersonaLabels[modelId] || SLOT_PERSONALITIES[index % SLOT_PERSONALITIES.length]?.name || `Agent ${index + 1}`;
+            const systemPrompt = modelSystemPrompts[modelId] ||
+              (isSuperSummaryTrigger(text)
+                ? buildResponseControlPrompt(true)
+                : `${SLOT_PERSONALITIES[index % SLOT_PERSONALITIES.length]?.prompt || "You are a helpful assistant."} ${buildResponseControlPrompt(false)}`);
+
+            const response = await fetch(
+              `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+                },
+                body: JSON.stringify({
+                  messages: [
+                    ...history.map(h => ({ role: h.role, content: h.content })),
+                    { role: "user", content: text }
+                  ],
+                  model: modelId,
+                  maxTokens: 4096,
+                  systemPrompt,
+                  fingerprint: await generateFingerprint(),
+                  sessionId: contextId || "anonymous",
+                  usageType: "chat",
+                  slotPersonality: SLOT_PERSONALITIES[index % SLOT_PERSONALITIES.length]?.prompt,
+                  userApiKeys: getBYOKKeys(),
+                }),
+              }
+            );
+
+            if (!response.ok) {
+              const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+              refreshBalance();
+
+              let errorMessage = errorData.error || "Unknown error";
+              if (response.status === 402) {
+                errorMessage = `**Insufficient credits**\n\n${errorData.message || 'Purchase more credits or earn credits through referrals.'}`;
+              } else if (response.status === 429) {
+                errorMessage = `**Rate limit reached**\n\nPlease wait a moment before sending another message.`;
+              }
+
+              return {
+                modelId,
+                content: errorMessage,
+                success: false
+              };
+            }
+
+            // Parse streaming response
+            const reader = response.body?.getReader();
+            const decoder = new TextDecoder();
+            let fullResponse = "";
+            let textBuffer = "";
+
+            if (reader) {
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                textBuffer += decoder.decode(value, { stream: true });
+
+                let newlineIndex: number;
+                while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+                  let line = textBuffer.slice(0, newlineIndex);
+                  textBuffer = textBuffer.slice(newlineIndex + 1);
+
+                  if (line.endsWith("\r")) line = line.slice(0, -1);
+                  if (line.startsWith(":") || line.trim() === "") continue;
+                  if (!line.startsWith("data: ")) continue;
+
+                  const jsonStr = line.slice(6).trim();
+                  if (jsonStr === "[DONE]") break;
+
+                  try {
+                    const parsed = JSON.parse(jsonStr);
+                    const content = parsed.choices?.[0]?.delta?.content;
+                    if (content) fullResponse += content;
+                  } catch {
+                    textBuffer = line + "\n" + textBuffer;
+                    break;
+                  }
+                }
+              }
+            }
+
+            refreshBalance();
+
+            return {
+              modelId,
+              content: fullResponse || "No response received",
+              success: true
+            };
+          } catch (err) {
+            console.error(`Error for ${modelId}:`, err);
+            return {
+              modelId,
+              content: `Error: ${err instanceof Error ? err.message : "Unknown error"}`,
+              success: false
+            };
+          }
+        });
+
+        const results = await Promise.all(requests);
+
+        const newResponses: ChatResponse[] = results.map(r => ({
+          id: generateUUID(),
+          model: r.modelId,
+          modelName: getModel(r.modelId)?.name || r.modelId,
+          prompt: text,
+          response: r.content,
+          timestamp: new Date().toISOString(),
+          roundIndex: newRoundIndex,
+          isError: !r.success,
+        }));
+
+        setResponses(prev => [...prev, ...newResponses]);
       }
     } catch (error) {
       console.error("Global error:", error);
