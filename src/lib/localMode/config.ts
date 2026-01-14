@@ -28,7 +28,7 @@ export type LocalModelInfo = {
 
 const LOCAL_MODE_STORAGE_KEY = "modelmix-local-mode";
 
-const DEFAULT_LOCAL_BASE_URL = "http://localhost:1234";
+const DEFAULT_LOCAL_BASE_URL = "http://127.0.0.1:1234";
 const DEFAULT_LOCAL_MODEL = "local-model";
 const DEFAULT_LOCAL_MODEL_LABEL = "Local Model";
 const runtimeEnv = (import.meta.env as unknown as Record<string, string | undefined>) || {};
@@ -187,10 +187,20 @@ export const fetchLocalModelCatalog = async (baseUrl: string): Promise<LocalMode
     coerceLocalModelId(value.id ?? value.model ?? value.name);
 
   const tryFetch = async (path: string) => {
-    const response = await fetch(`${normalized}${path}`);
-    if (!response.ok) return null;
-    return response.json();
+    try {
+      const response = await fetch(`${normalized}${path}`);
+      if (!response.ok) return null;
+      return response.json();
+    } catch (error) {
+      // Re-throw network errors to be handled by caller
+      if (error instanceof TypeError && error.message.includes("fetch")) {
+        throw error;
+      }
+      return null;
+    }
   };
+
+  let lastError: unknown;
 
   try {
     const v0 = await tryFetch("/api/v0/models");
@@ -220,8 +230,8 @@ export const fetchLocalModelCatalog = async (baseUrl: string): Promise<LocalMode
       models.sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id));
       return models;
     }
-  } catch {
-    void 0;
+  } catch (e) {
+    lastError = e;
   }
 
   try {
@@ -243,8 +253,8 @@ export const fetchLocalModelCatalog = async (baseUrl: string): Promise<LocalMode
       models.sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id));
       return models;
     }
-  } catch {
-    void 0;
+  } catch (e) {
+    lastError = e;
   }
 
   try {
@@ -266,8 +276,16 @@ export const fetchLocalModelCatalog = async (baseUrl: string): Promise<LocalMode
       models.sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id));
       return models;
     }
-  } catch {
-    void 0;
+  } catch (e) {
+    lastError = e;
+  }
+
+  if (lastError) {
+    console.warn("Failed to fetch local models:", lastError);
+    // If it's a network error, re-throw it so UI can show "Connection Refused"
+    if (lastError instanceof TypeError && (lastError.message.includes("fetch") || lastError.message.includes("Network"))) {
+      throw new Error(`Failed to connect to local server at ${normalized}. Please ensure it is running.`);
+    }
   }
 
   return [];

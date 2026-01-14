@@ -15,7 +15,12 @@ const FeedbackWidget = () => {
     if (!feedback.trim()) return;
     
     // Store feedback locally (could be sent to a backend later)
-    const feedbackLog = JSON.parse(localStorage.getItem("modelmix-feedback") || "[]");
+    let feedbackLog;
+    try {
+      feedbackLog = JSON.parse(localStorage.getItem("modelmix-feedback") || "[]");
+    } catch {
+      feedbackLog = [];
+    }
     feedbackLog.push({
       type: feedbackType,
       message: feedback,

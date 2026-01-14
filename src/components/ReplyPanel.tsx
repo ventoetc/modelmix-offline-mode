@@ -29,7 +29,7 @@ const ReplyPanel = ({
   onSend,
   isLoading,
   unsupportedModels = [],
-  availableModels,
+  availableModels = [],
   onDeepResearchClick,
   onSwapModel,
   onRemoveModelSlot,
@@ -45,6 +45,11 @@ const ReplyPanel = ({
   useEffect(() => {
     if (mentionedModels.length === 0) {
       setReplyMode("all");
+      return;
+    }
+    // If only 1 model is mentioned, force strict 1:1 privacy
+    if (mentionedModels.length === 1) {
+      setReplyMode("private-mentioned");
       return;
     }
     setReplyMode((prev) => (prev === "all" ? "mentioned-only" : prev));
