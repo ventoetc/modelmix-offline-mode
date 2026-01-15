@@ -230,8 +230,48 @@ const ChatPanel = ({
 }: ChatPanelProps) => {
   const navigate = useNavigate();
   const [showAllModels, setShowAllModels] = useState(false);
-  const [newPersonaName, setNewPersonaName] = useState("");
   const [isSpeaking, setIsSpeaking] = useState(false);
+
+  // Persona management dialog state
+  const [showPersonaDialog, setShowPersonaDialog] = useState(false);
+  const [selectedPersonaId, setSelectedPersonaId] = useState<string>("");
+  const [personaPrompt, setPersonaPrompt] = useState("");
+  const [personaName, setPersonaName] = useState("");
+
+  // Initialize persona dialog with current values when opened
+  const handleOpenPersonaDialog = () => {
+    const currentPersona = savedPersonas?.find(p => p.name === activePersonaLabel);
+    if (currentPersona) {
+      setSelectedPersonaId(currentPersona.id);
+      setPersonaName(currentPersona.name);
+      setPersonaPrompt(currentPersona.prompt);
+    } else if (systemPrompt) {
+      setSelectedPersonaId("");
+      setPersonaName(activePersonaLabel || "");
+      setPersonaPrompt(systemPrompt);
+    } else {
+      setSelectedPersonaId("");
+      setPersonaName("");
+      setPersonaPrompt("");
+    }
+    setShowPersonaDialog(true);
+  };
+
+  const handleApplyPersona = () => {
+    if (selectedPersonaId) {
+      const persona = savedPersonas?.find(p => p.id === selectedPersonaId);
+      if (persona) {
+        onSystemPromptChange?.(persona.prompt);
+        onActivePersonaLabelChange?.(persona.name);
+        toast({ description: `Applied persona: ${persona.name}` });
+      }
+    } else if (personaPrompt.trim()) {
+      onSystemPromptChange?.(personaPrompt);
+      onActivePersonaLabelChange?.(personaName.trim() || null);
+      toast({ description: "Custom prompt applied" });
+    }
+    setShowPersonaDialog(false);
+  };
 
   // Check if current model is a free tier model
   const isCurrentModelFree = FREE_MODEL_IDS.includes(modelId);
@@ -569,104 +609,18 @@ const ChatPanel = ({
           <div className="flex items-center gap-1 shrink-0">
             {/* Primary actions - always visible */}
             {onSystemPromptChange && (
-              <Popover>
-                <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={cn(
-                      "h-7 w-7",
-                      systemPrompt ? "text-primary" : "text-muted-foreground"
-                    )}
-                    title="Edit System Prompt"
-                  >
-                    <FileText className="h-3.5 w-3.5" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-80" onClick={(e) => e.stopPropagation()}>
-                  <div className="space-y-3">
-                    <div className="space-y-2">
-                      <h4 className="font-medium leading-none">System Prompt</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Override the system prompt for this model.
-                      </p>
-                      <Textarea
-                        value={systemPrompt || ""}
-                        onChange={(e) => {
-                          onActivePersonaLabelChange?.(null);
-                          onSystemPromptChange?.(e.target.value);
-                        }}
-                        placeholder="Enter a custom system prompt..."
-                        className="min-h-[100px] text-xs"
-                      />
-                    </div>
-
-                    {onSavePersona && (
-                      <div className="pt-2 border-t space-y-2">
-                        <Label className="text-xs font-medium">Saved Presets</Label>
-                        
-                        {(savedPersonas?.length || 0) > 0 ? (
-                          <div className="max-h-[120px] overflow-y-auto space-y-1 border rounded-md p-1">
-                            {savedPersonas?.map((persona) => (
-                              <div key={persona.id} className="flex items-center justify-between gap-2 p-1.5 hover:bg-muted rounded group text-xs">
-                                <span 
-                                  className="truncate flex-1 cursor-pointer font-medium"
-                                  onClick={() => {
-                                    onSystemPromptChange?.(persona.prompt);
-                                    onActivePersonaLabelChange?.(persona.name);
-                                    toast({ description: `Loaded preset: ${persona.name}` });
-                                  }}
-                                  title={persona.prompt}
-                                >
-                                  {persona.name}
-                                </span>
-                                {onDeletePersona && !persona.isReadOnly && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      onDeletePersona(persona.id);
-                                    }}
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-[10px] text-muted-foreground italic">No saved presets yet.</p>
-                        )}
-
-                        <div className="flex gap-2 pt-1">
-                          <Input 
-                            placeholder="New preset name..." 
-                            value={newPersonaName} 
-                            onChange={(e) => setNewPersonaName(e.target.value)}
-                            className="h-7 text-xs" 
-                          />
-                          <Button 
-                            size="sm" 
-                            className="h-7 px-2"
-                            disabled={!newPersonaName.trim() || !systemPrompt?.trim()}
-                            onClick={() => {
-                              if (onSavePersona && newPersonaName.trim() && systemPrompt) {
-                                onSavePersona(newPersonaName, systemPrompt);
-                                setNewPersonaName("");
-                              }
-                            }}
-                          >
-                            <Save className="h-3.5 w-3.5 mr-1" />
-                            Save
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </PopoverContent>
-              </Popover>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "h-7 w-7",
+                  systemPrompt ? "text-primary" : "text-muted-foreground"
+                )}
+                onClick={(e) => { e.stopPropagation(); handleOpenPersonaDialog(); }}
+                title="Persona Settings"
+              >
+                <Settings2 className="h-3.5 w-3.5" />
+              </Button>
             )}
 
             {response && (
@@ -886,6 +840,85 @@ const ChatPanel = ({
           </div>
         )}
       </CardContent>
+
+      {/* Persona Management Dialog */}
+      <Dialog open={showPersonaDialog} onOpenChange={setShowPersonaDialog}>
+        <DialogContent className="sm:max-w-[500px]" onClick={(e) => e.stopPropagation()}>
+          <DialogHeader>
+            <DialogTitle>Persona Settings</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="persona-select" className="text-sm font-medium">
+                Select Persona
+              </Label>
+              <Select
+                value={selectedPersonaId}
+                onValueChange={(value) => {
+                  setSelectedPersonaId(value);
+                  const persona = savedPersonas?.find(p => p.id === value);
+                  if (persona) {
+                    setPersonaName(persona.name);
+                    setPersonaPrompt(persona.prompt);
+                  } else if (value === "custom") {
+                    setPersonaName("");
+                    setPersonaPrompt("");
+                  }
+                }}
+              >
+                <SelectTrigger id="persona-select">
+                  <SelectValue placeholder="Choose a persona or create custom" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="custom">Custom Persona</SelectItem>
+                  {savedPersonas?.map((persona) => (
+                    <SelectItem key={persona.id} value={persona.id}>
+                      {persona.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {selectedPersonaId === "custom" && (
+              <div className="space-y-2">
+                <Label htmlFor="persona-name" className="text-sm font-medium">
+                  Persona Name
+                </Label>
+                <Input
+                  id="persona-name"
+                  value={personaName}
+                  onChange={(e) => setPersonaName(e.target.value)}
+                  placeholder="e.g., Code Expert, Creative Writer..."
+                  className="text-sm"
+                />
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="persona-prompt" className="text-sm font-medium">
+                System Prompt
+              </Label>
+              <Textarea
+                id="persona-prompt"
+                value={personaPrompt}
+                onChange={(e) => setPersonaPrompt(e.target.value)}
+                placeholder="Enter the system prompt for this persona..."
+                className="min-h-[150px] text-sm"
+                disabled={selectedPersonaId !== "custom" && selectedPersonaId !== ""}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPersonaDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleApplyPersona} disabled={!personaPrompt.trim()}>
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };

@@ -905,11 +905,11 @@ const ModelMix = () => {
         const requests = activeModelIds.map(async (modelId, index) => {
           try {
             const personaName = modelPersonaLabels[modelId] || SLOT_PERSONALITIES[index % SLOT_PERSONALITIES.length]?.name || `Agent ${index + 1}`;
-            const system = modelSystemPrompts[modelId] || 
-              (isSuperSummaryTrigger(text) 
-                ? buildResponseControlPrompt(true) 
+            const system = modelSystemPrompts[modelId] ||
+              (isSuperSummaryTrigger(text)
+                ? buildResponseControlPrompt(true)
                 : `${SLOT_PERSONALITIES[index % SLOT_PERSONALITIES.length]?.prompt || "You are a helpful assistant."} ${buildResponseControlPrompt(false)}`);
-            
+
             // Build conversation history for this model
             const messages: LocalMessage[] = [
               { role: "system", content: system },
@@ -930,6 +930,7 @@ const ModelMix = () => {
 
             return {
               modelId,
+              personaName,
               content: response.content,
               success: true
             };
@@ -937,6 +938,7 @@ const ModelMix = () => {
             console.error(`Error for ${modelId}:`, err);
             return {
               modelId,
+              personaName: modelPersonaLabels[modelId] || SLOT_PERSONALITIES[index % SLOT_PERSONALITIES.length]?.name || `Agent ${index + 1}`,
               content: `Error: ${err instanceof Error ? err.message : "Unknown error"}`,
               success: false
             };
@@ -944,11 +946,12 @@ const ModelMix = () => {
         });
 
         const results = await Promise.all(requests);
-        
+
         const newResponses: ChatResponse[] = results.map(r => ({
           id: generateUUID(),
           model: r.modelId,
           modelName: isLocalMode ? r.modelId : getModel(r.modelId)?.name || r.modelId,
+          personaName: r.personaName,
           prompt: text,
           response: r.content,
           timestamp: new Date().toISOString(),
