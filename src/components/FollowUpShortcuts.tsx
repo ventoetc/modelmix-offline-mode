@@ -1,22 +1,18 @@
-import { 
-  HelpCircle, 
-  Lightbulb, 
-  Code, 
+import {
+  HelpCircle,
+  Lightbulb,
+  Code,
   ArrowRight,
   Scale,
-  MoreHorizontal,
-  Brain
+  MoreHorizontal
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
-import { useDeepResearchLimit } from "@/hooks/useDeepResearchLimit";
 interface FollowUpShortcut {
   label: string;
   prompt: string;
@@ -111,43 +107,14 @@ const SHORTCUTS: FollowUpShortcut[] = [
 interface FollowUpShortcutsProps {
   onSelect: (prompt: string) => void;
   disabled?: boolean;
-  onDeepResearchClick?: () => void;
 }
 
-const FollowUpShortcuts = ({ onSelect, disabled, onDeepResearchClick }: FollowUpShortcutsProps) => {
+const FollowUpShortcuts = ({ onSelect, disabled }: FollowUpShortcutsProps) => {
   const primaryShortcuts = SHORTCUTS.filter(s => s.primary);
   const secondaryShortcuts = SHORTCUTS.filter(s => !s.primary);
-  const { remainingToday, dailyLimit, canUse, isLoading } = useDeepResearchLimit();
 
   return (
     <div className="flex items-center gap-1.5">
-      {/* Deep Research Link - Special tracked action */}
-      {onDeepResearchClick && (
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={disabled || !canUse || isLoading}
-          onClick={onDeepResearchClick}
-          className={cn(
-            "h-7 px-2.5 text-xs gap-1.5 rounded-full",
-            canUse ? "border-primary/50 hover:border-primary hover:bg-primary/5" : "opacity-50"
-          )}
-          title={canUse 
-            ? `Deep Research: Multi-model collaborative analysis (${remainingToday}/${dailyLimit} remaining today)`
-            : `Daily limit reached (${dailyLimit} per day)`
-          }
-        >
-          <Brain className="h-3.5 w-3.5 text-primary" />
-          <span className="hidden sm:inline">Deep Research</span>
-          <Badge 
-            variant="secondary" 
-            className="h-4 px-1 text-[10px] ml-0.5 bg-primary/10 text-primary"
-          >
-            {remainingToday}
-          </Badge>
-        </Button>
-      )}
-
       {/* Primary shortcuts - always visible */}
       {primaryShortcuts.map((shortcut, index) => (
         <Button

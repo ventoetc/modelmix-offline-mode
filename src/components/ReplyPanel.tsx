@@ -19,7 +19,6 @@ interface ReplyPanelProps {
   isLoading: boolean;
   unsupportedModels?: UnsupportedModelInfo[];
   availableModels: MentionedModel[];
-  onDeepResearchClick?: () => void;
   onSwapModel?: (oldModelId: string, newModelId: string) => void;
   onRemoveModelSlot?: (modelId: string) => void;
   agents?: AgentIdentity[];
@@ -30,7 +29,6 @@ const ReplyPanel = ({
   isLoading,
   unsupportedModels = [],
   availableModels = [],
-  onDeepResearchClick,
   onSwapModel,
   onRemoveModelSlot,
   agents,
@@ -198,10 +196,9 @@ const ReplyPanel = ({
         <div className="container mx-auto px-4 py-3 pb-4">
           {/* Follow-up shortcuts */}
           <div className="mb-2">
-            <FollowUpShortcuts 
-              onSelect={handleShortcutSelect} 
+            <FollowUpShortcuts
+              onSelect={handleShortcutSelect}
               disabled={isLoading}
-              onDeepResearchClick={onDeepResearchClick}
             />
           </div>
 

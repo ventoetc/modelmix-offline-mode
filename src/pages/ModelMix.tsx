@@ -42,7 +42,6 @@ import TesterAccountSwitcher from "@/components/TesterAccountSwitcher";
 import { ContextIdBadge } from "@/components/ContextIdBadge";
 import { useOpenRouterModels, OpenRouterModel } from "@/hooks/useOpenRouterModels";
 import WindowManagementMenu from "@/components/WindowManagementMenu";
-import DeepResearchButton from "@/components/DeepResearchButton";
 import RoutingIntelligenceLightbox from "@/components/RoutingIntelligenceLightbox";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -562,10 +561,7 @@ const ModelMix = () => {
   
   // Routing Intelligence Lightbox state - shows during loading
   const [showRoutingLightbox, setShowRoutingLightbox] = useState(false);
-  
-  // Deep Research Dialog state (controlled by FollowUpShortcuts link)
-  const [showDeepResearch, setShowDeepResearch] = useState(false);
-  
+
   // Failed/invalid models tracking
   const [failedModels, setFailedModels] = useState<Set<string>>(new Set());
   
@@ -1197,7 +1193,6 @@ const ModelMix = () => {
               ? modelPersonaLabels[id] || SLOT_PERSONALITIES[index % SLOT_PERSONALITIES.length]?.name || `Agent ${index + 1}`
               : getModel(id)?.name || id.split("/")[1] || id,
           }))}
-          onDeepResearchClick={() => setShowDeepResearch(true)}
           onSwapModel={handleSwapModelForVision}
           onRemoveModelSlot={handleRemoveModelSlot}
           agents={isDeliberationModeEnabled ? deliberationAgents : undefined}
