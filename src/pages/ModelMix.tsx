@@ -1133,10 +1133,10 @@ const ModelMix = () => {
             const model = getModel(modelId);
             const depth = responseDepths[modelId] || globalDepth;
             const localAlias = SLOT_PERSONALITIES[index % SLOT_PERSONALITIES.length]?.name || `Agent ${index + 1}`;
-            
-            // CHANGED: Removed prefix
+
+            // Use custom persona label if set, otherwise fall back to default personality name
             const displayName = isLocalMode
-              ? localAlias
+              ? modelPersonaLabels[modelId] || localAlias
               : model?.name || modelId;
 
             return (

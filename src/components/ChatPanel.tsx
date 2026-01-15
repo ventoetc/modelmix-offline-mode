@@ -238,6 +238,9 @@ const ChatPanel = ({
   const [personaPrompt, setPersonaPrompt] = useState("");
   const [personaName, setPersonaName] = useState("");
 
+  // Confirmation dialog for removing panel
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+
   // Initialize persona dialog with current values when opened
   const handleOpenPersonaDialog = () => {
     const currentPersona = savedPersonas?.find(p => p.name === activePersonaLabel);
@@ -271,6 +274,21 @@ const ChatPanel = ({
       toast({ description: "Custom prompt applied" });
     }
     setShowPersonaDialog(false);
+  };
+
+  const handleRemoveClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    // Show confirmation if there's an active conversation (has response or has multiple turns)
+    if (response || hasMultipleTurns) {
+      setShowRemoveConfirm(true);
+    } else {
+      onRemove?.();
+    }
+  };
+
+  const handleConfirmRemove = () => {
+    setShowRemoveConfirm(false);
+    onRemove?.();
   };
 
   // Check if current model is a free tier model
@@ -692,7 +710,7 @@ const ChatPanel = ({
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                onClick={(e) => { e.stopPropagation(); onRemove(); }}
+                onClick={handleRemoveClick}
                 title="Remove"
               >
                 <X className="h-3.5 w-3.5" />
@@ -915,6 +933,28 @@ const ChatPanel = ({
             </Button>
             <Button onClick={handleApplyPersona} disabled={!personaPrompt.trim()}>
               OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remove Confirmation Dialog */}
+      <Dialog open={showRemoveConfirm} onOpenChange={setShowRemoveConfirm}>
+        <DialogContent className="sm:max-w-[400px]" onClick={(e) => e.stopPropagation()}>
+          <DialogHeader>
+            <DialogTitle>Remove Panel?</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground">
+              This panel has an active conversation. Are you sure you want to remove it? This action cannot be undone.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRemoveConfirm(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmRemove}>
+              Remove
             </Button>
           </DialogFooter>
         </DialogContent>

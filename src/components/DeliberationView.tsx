@@ -1,28 +1,30 @@
 import React, { useEffect, useRef } from "react";
-import { 
-  Deliberation, 
-  DeliberationStatus, 
-  ChatMessage 
+import {
+  Deliberation,
+  DeliberationStatus,
+  ChatMessage
 } from "@/lib/localMode";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Play, Pause, Square, SkipForward } from "lucide-react";
+import { Play, Pause, Square, SkipForward, AlertCircle } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
 interface DeliberationViewProps {
   state: Deliberation | null;
+  error?: string | null;
   onPause: () => void;
   onResume: () => void;
   onStop: () => void;
   onAdvance: () => void; // Manually advance round if needed
 }
 
-export function DeliberationView({ 
-  state, 
-  onPause, 
-  onResume, 
+export function DeliberationView({
+  state,
+  error = null,
+  onPause,
+  onResume,
   onStop,
   onAdvance
 }: DeliberationViewProps) {
@@ -34,6 +36,18 @@ export function DeliberationView({
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [state?.rounds]);
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-4 p-8">
+        <AlertCircle className="h-12 w-12 text-destructive" />
+        <div className="text-center">
+          <h3 className="text-lg font-semibold text-destructive mb-2">Deliberation Error</h3>
+          <p className="text-sm text-muted-foreground max-w-md">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!state) {
     return (
