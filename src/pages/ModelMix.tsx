@@ -129,6 +129,22 @@ const ModelMix = () => {
   const { contextId, isTester, usageValue, sessionTokens } = useTesterContext();
   const { trackTemplateUsage } = useActionTracker();
 
+  // Session persistence key
+  const SESSION_STORAGE_KEY = "modelmix-active-session";
+
+  const [conversationStarted, setConversationStarted] = useState(() => {
+    const saved = localStorage.getItem(SESSION_STORAGE_KEY);
+    if (saved) {
+      try {
+        const session = JSON.parse(saved);
+        return session.conversationStarted || false;
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  });
+
   const [executionMode] = useState(() => getExecutionMode());
   const localModeConfig = useMemo(() => getLocalModeConfig(executionMode), [executionMode]);
   const isLocalMode = localModeConfig.enabled;
@@ -148,53 +164,7 @@ const ModelMix = () => {
   const [isDeliberationModeEnabled, setIsDeliberationModeEnabled] = useState(false);
   const lastProcessedDeliberationId = useRef<string | null>(null);
 
-  // Handle Deliberation Completion
-  useEffect(() => {
-    if (deliberationState?.status === "completed" && deliberationState.id !== lastProcessedDeliberationId.current) {
-      lastProcessedDeliberationId.current = deliberationState.id;
-      
-      // Get the last message or consensus
-      // For now, let's use the last message from the last round as the "result"
-      // Ideally, we should have a specific consensus field
-      const lastRound = deliberationState.rounds[deliberationState.rounds.length - 1];
-      const lastMessage = lastRound?.messages[lastRound.messages.length - 1];
-      
-      if (lastMessage) {
-        const resultText = `**Deliberation Result:**\n\n${lastMessage.content}`;
-        
-        // Add to main chat
-        const resultResponse: ChatResponse = {
-          id: `deliberation-${deliberationState.id}`,
-          model: "deliberation-engine",
-          modelName: "Deliberation Consensus",
-          prompt: deliberationState.task,
-          response: resultText,
-          timestamp: new Date().toISOString(),
-          roundIndex: prompts.length // New round
-        };
 
-        // If this was the first interaction, we need to set the prompt too
-        if (!conversationStarted) {
-           setPrompts([deliberationState.task]);
-           setResponses([resultResponse]);
-           setConversationStarted(true);
-        } else {
-           setPrompts(prev => [...prev, deliberationState.task]); // Or just append response to current?
-           // Actually, if we are in the middle of a convo, we might want to just append the response
-           // But 'responses' array usually matches 'prompts' array by index for rounds.
-           // So we should add a prompt entry too.
-           setResponses(prev => [...prev, resultResponse]);
-        }
-        
-        toast({
-          title: "Deliberation Completed",
-          description: "Consensus result has been added to the chat.",
-        });
-
-        setIsDeliberationModeEnabled(false);
-      }
-    }
-  }, [deliberationState, conversationStarted, prompts.length]);
 
   const localAgentsRef = useRef<Map<string, { agentId: string; alias: string }>>(new Map());
   
@@ -306,8 +276,7 @@ const ModelMix = () => {
     "openai/gpt-5-mini",
   ];
 
-  // Session persistence key
-  const SESSION_STORAGE_KEY = "modelmix-active-session";
+
 
   // Restore or create session
   const [sessionId, setSessionId] = useState<string>(() => {
@@ -373,18 +342,7 @@ const ModelMix = () => {
   );
 
   const [attachments, setAttachments] = useState<Attachment[]>([]);
-  const [conversationStarted, setConversationStarted] = useState(() => {
-    const saved = localStorage.getItem(SESSION_STORAGE_KEY);
-    if (saved) {
-      try {
-        const session = JSON.parse(saved);
-        return session.conversationStarted || false;
-      } catch {
-        return false;
-      }
-    }
-    return false;
-  });
+
   const [sessionTitle, setSessionTitle] = useState(() => {
     const saved = localStorage.getItem(SESSION_STORAGE_KEY);
     if (saved) {
@@ -506,6 +464,54 @@ const ModelMix = () => {
     }
   });
   const [currentViewRound, setCurrentViewRound] = useState<number | "all">("all");
+
+  // Handle Deliberation Completion
+  useEffect(() => {
+    if (deliberationState?.status === "completed" && deliberationState.id !== lastProcessedDeliberationId.current) {
+      lastProcessedDeliberationId.current = deliberationState.id;
+      
+      // Get the last message or consensus
+      // For now, let's use the last message from the last round as the "result"
+      // Ideally, we should have a specific consensus field
+      const lastRound = deliberationState.rounds[deliberationState.rounds.length - 1];
+      const lastMessage = lastRound?.messages[lastRound.messages.length - 1];
+      
+      if (lastMessage) {
+        const resultText = `**Deliberation Result:**\n\n${lastMessage.content}`;
+        
+        // Add to main chat
+        const resultResponse: ChatResponse = {
+          id: `deliberation-${deliberationState.id}`,
+          model: "deliberation-engine",
+          modelName: "Deliberation Consensus",
+          prompt: deliberationState.task,
+          response: resultText,
+          timestamp: new Date().toISOString(),
+          roundIndex: prompts.length // New round
+        };
+
+        // If this was the first interaction, we need to set the prompt too
+        if (!conversationStarted) {
+           setPrompts([deliberationState.task]);
+           setResponses([resultResponse]);
+           setConversationStarted(true);
+        } else {
+           setPrompts(prev => [...prev, deliberationState.task]); // Or just append response to current?
+           // Actually, if we are in the middle of a convo, we might want to just append the response
+           // But 'responses' array usually matches 'prompts' array by index for rounds.
+           // So we should add a prompt entry too.
+           setResponses(prev => [...prev, resultResponse]);
+        }
+        
+        toast({
+          title: "Deliberation Completed",
+          description: "Consensus result has been added to the chat.",
+        });
+
+        setIsDeliberationModeEnabled(false);
+      }
+    }
+  }, [deliberationState, conversationStarted, prompts.length]);
 
   const canModelReadRound = useCallback((modelId: string, roundIndex: number) => {
     const meta = promptMeta[roundIndex];

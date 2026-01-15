@@ -7,6 +7,7 @@ export {
   isLocalhostUrl,
   normalizeBaseUrl,
   fetchLocalModelCatalog,
+  EXECUTION_MODE_STORAGE_KEY,
 } from "./config";
 export type {
   LocalAgent,

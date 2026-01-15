@@ -59,7 +59,13 @@ const parseStoredConfig = (): Partial<LocalModeConfig> => {
   }
 };
 
+export const EXECUTION_MODE_STORAGE_KEY = "modelmix-execution-mode";
+
 export const getExecutionMode = (): ExecutionMode => {
+  if (typeof window !== "undefined") {
+    const stored = localStorage.getItem(EXECUTION_MODE_STORAGE_KEY);
+    if (stored === "local" || stored === "cloud") return stored;
+  }
   const envValue = runtimeEnv.VITE_EXECUTION_MODE;
   if (envValue && envValue.toLowerCase() === "local") return "local";
   return "cloud";
