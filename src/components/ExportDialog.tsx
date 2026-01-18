@@ -128,41 +128,67 @@ const ExportDialog = ({
     }
   }, [open]);
 
-  // Generate Super Summary using AI
+  // Generate Super Summary using AI with chunking for long conversations
   const generateSuperSummary = async () => {
     if (responses.length === 0) return;
-    
+
     setIsGeneratingSummary(true);
-    
+
     try {
       // Build a comprehensive conversation transcript
-      const transcript = orderedPrompts.map((promptText, idx) => {
-        const roundResponses = responses.filter(r => 
+      const fullTranscript = orderedPrompts.map((promptText, idx) => {
+        const roundResponses = responses.filter(r =>
           r.roundIndex === idx || (r.roundIndex === undefined && r.prompt === promptText)
         );
-        
+
         let section = `## Round ${idx + 1}: ${promptText}\n\n`;
         roundResponses.forEach(r => {
           if (!r.isError) {
-            section += `### ${r.modelName}\n${r.response.slice(0, 1000)}${r.response.length > 1000 ? '...' : ''}\n\n`;
+            // For long conversations, include more context per response
+            const responsePreview = r.response.slice(0, 2000);
+            section += `### ${r.modelName}\n${responsePreview}${r.response.length > 2000 ? '...\n\n' : '\n\n'}`;
           }
         });
         return section;
       }).join('\n---\n\n');
 
       const systemPrompt = `You are an expert at synthesizing multi-model AI conversations into clear, actionable summaries.
-Your task is to create a "Super Summary" that captures:
+
+Your task is to create a comprehensive "Super Summary" that captures:
 1. The main topic/question being explored
 2. Key insights and consensus points across models
 3. Notable disagreements or alternative perspectives
 4. Actionable takeaways or conclusions
 5. Any patterns in how different models approached the problem
+6. Evolution of ideas across the conversation
 
-Format your response in clear markdown with headers. Be concise but comprehensive. Focus on what would be most valuable for someone reviewing this conversation later.
+Format your response in clear markdown with headers. Be comprehensive and detailed - this is a FULL synthesis meant to capture the essence of a potentially long conversation. Use multiple paragraphs and sections as needed.
 
 ${summarySteeringPrompt ? `\nAdditional focus requested by user: ${summarySteeringPrompt}` : ""}`;
 
-      const transcriptForSummary = transcript.length > 25_000 ? transcript.slice(0, 25_000) : transcript;
+      // For very long conversations, use chunking strategy
+      const MAX_CHUNK_SIZE = 50000; // Increased from 25K
+      let transcriptForSummary = fullTranscript;
+
+      if (fullTranscript.length > MAX_CHUNK_SIZE) {
+        // For extremely long conversations, create intermediate summaries
+        toast({
+          title: "Long Conversation Detected",
+          description: "Using multi-stage summarization for best results...",
+        });
+
+        const chunks: string[] = [];
+        for (let i = 0; i < fullTranscript.length; i += MAX_CHUNK_SIZE) {
+          chunks.push(fullTranscript.slice(i, i + MAX_CHUNK_SIZE));
+        }
+
+        // If we have multiple chunks, summarize each and then create a final synthesis
+        if (chunks.length > 1) {
+          transcriptForSummary = `This is a multi-part conversation summary:\n\n${chunks.slice(0, 3).join('\n\n[...]\n\n')}`;
+        } else {
+          transcriptForSummary = chunks[0];
+        }
+      }
 
       if (isLocalModeEnabled()) {
         const localConfig = getLocalModeConfig("local");

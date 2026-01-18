@@ -5,10 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Send, Plus, Minus, RefreshCw, 
+import {
+  Send, Plus, Minus, RefreshCw,
   Sparkles, Zap, AlignLeft, FileText,
-  Coins, FilePlus, Settings
+  Coins, FilePlus, Settings, Columns2, AlignJustify
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -497,7 +497,35 @@ const ModelMix = () => {
   const [globalDepth, setGlobalDepth] = useState<ResponseDepth>("basic");
   const [expandedPanelId, setExpandedPanelId] = useState<string | null>(null);
   const [compareMode, setCompareMode] = useState(false);
-  
+
+  // View mode state for split/stack comparison
+  type ViewMode = "stack" | "split";
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    const saved = localStorage.getItem("modelmix-view-mode");
+    return (saved === "split" ? "split" : "stack") as ViewMode;
+  });
+
+  // Persist view mode preference
+  useEffect(() => {
+    localStorage.setItem("modelmix-view-mode", viewMode);
+  }, [viewMode]);
+
+  // Mobile swipe state for split view
+  const [mobileActiveIndex, setMobileActiveIndex] = useState(0);
+
+  // Handle swipe gestures on mobile for split view
+  const handleSwipeLeft = useCallback(() => {
+    if (viewMode === "split" && mobileActiveIndex < Math.min(2, panelCount) - 1) {
+      setMobileActiveIndex((prev) => prev + 1);
+    }
+  }, [viewMode, mobileActiveIndex, panelCount]);
+
+  const handleSwipeRight = useCallback(() => {
+    if (viewMode === "split" && mobileActiveIndex > 0) {
+      setMobileActiveIndex((prev) => prev - 1);
+    }
+  }, [viewMode, mobileActiveIndex]);
+
   // Round navigation state - now persisted
   const [prompts, setPrompts] = useState<string[]>(() => {
     const saved = localStorage.getItem(SESSION_STORAGE_KEY);
@@ -1069,7 +1097,7 @@ const ModelMix = () => {
       <main className="flex-1 flex flex-col h-full overflow-hidden relative w-full">
         {/* Header */}
         <header className="flex items-center justify-between px-4 py-3 border-b shrink-0 z-10 bg-background/80 backdrop-blur-sm">
-           {/* ... Header content ... */}
+           {/* Left: Logo + Title */}
            <div className="flex items-center gap-2">
              <SidebarTrigger />
              <div className="flex items-center gap-2">
@@ -1094,7 +1122,7 @@ const ModelMix = () => {
                     autoFocus
                   />
                 ) : (
-                  <h1 
+                  <h1
                     className="text-lg font-semibold truncate max-w-[200px] cursor-pointer hover:bg-muted/50 px-2 py-1 rounded"
                     onClick={() => setIsEditingTitle(true)}
                     title="Click to edit title"
@@ -1104,7 +1132,32 @@ const ModelMix = () => {
                 )}
              </div>
            </div>
-           
+
+           {/* Center: View Mode Toggle */}
+           {conversationStarted && responses.length > 0 && (
+             <div className="flex items-center gap-1 bg-muted/50 rounded-md p-1">
+               <Button
+                 variant={viewMode === "stack" ? "secondary" : "ghost"}
+                 size="sm"
+                 onClick={() => setViewMode("stack")}
+                 className="h-7 w-7 p-0"
+                 title="Stack view - vertical layout"
+               >
+                 <AlignJustify className="h-4 w-4" />
+               </Button>
+               <Button
+                 variant={viewMode === "split" ? "secondary" : "ghost"}
+                 size="sm"
+                 onClick={() => setViewMode("split")}
+                 className="h-7 w-7 p-0"
+                 title="Split view - side-by-side comparison"
+               >
+                 <Columns2 className="h-4 w-4" />
+               </Button>
+             </div>
+           )}
+
+           {/* Right: Controls */}
            <div className="flex items-center gap-2">
               {/* ... Right side controls ... */}
               <Button variant="ghost" size="icon" onClick={() => setShowSettings(true)}>
@@ -1115,14 +1168,14 @@ const ModelMix = () => {
 
         {/* Main Content Area */}
         {/* ... */}
-        
-        {/* Chat Panels Grid */}
-        <div className={`grid gap-4 ${getGridCols()}`}>
-          {Array.from({ length: panelCount }).map((_, index) => {
+
+        {/* Render function for chat panels */}
+        {(() => {
+          const renderChatPanel = (index: number) => {
             const modelId = selectedModels[index];
             const response = currentViewRound === "all"
-              ? responses.find((r) => r.model === modelId && r.roundIndex === prompts.length - 1) 
-                || responses.filter(r => r.model === modelId).sort((a, b) => 
+              ? responses.find((r) => r.model === modelId && r.roundIndex === prompts.length - 1)
+                || responses.filter(r => r.model === modelId).sort((a, b) =>
                   new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
                 )[0]
               : responses.find((r) => r.model === modelId && r.roundIndex === currentViewRound);
@@ -1130,55 +1183,129 @@ const ModelMix = () => {
             const model = getModel(modelId);
             const depth = responseDepths[modelId] || globalDepth;
             const localAlias = SLOT_PERSONALITIES[index % SLOT_PERSONALITIES.length]?.name || `Agent ${index + 1}`;
-            
-            // CHANGED: Removed prefix
+
             const displayName = isLocalMode
               ? localAlias
               : model?.name || modelId;
 
             return (
-              <div 
-                key={`panel-${index}`} 
-                id={`chat-panel-${index}`}
-                className="transition-all duration-200"
-              >
-                <ChatPanel
-                  modelId={modelId}
-                  modelName={displayName}
-                  response={response}
-                  isLoading={isLoadingModel}
-                  isLocked={conversationStarted || isLocalMode}
-                  isFreeTier={!tierConfig.canAccessAllModels && !isLocalMode}
-                  isAnonymous={userTier === "anonymous" && !isLocalMode}
-                  panelIndex={index}
-                  isInvalid={failedModels.has(modelId)}
-                  reliabilityPercent={getModelReliability(modelId)}
-                  supportsVision={supportsVision(modelId)}
-                  responseDepth={depth}
-                  onDepthChange={(d) => handleDepthChange(modelId, d)}
-                  onOpenLightbox={() => response && setLightboxResponse(response)}
-                  onOpenThread={() => setThreadModel({ id: modelId, name: model?.name || modelId })}
-                  onModelChange={(newModel) => handleModelChange(index, newModel)}
-                  onInfoClick={() => handleOpenModelInfo(modelId)}
-                  onRetry={() => retryModel(modelId)}
-                  onRemove={() => handleRemoveModelSlot(modelId)}
-                  availableModels={availableModels}
-                  groupedModels={groupedModels}
-                  maxHeight={panelMaxHeight}
-                  hasMultipleTurns={prompts.length > 1}
-                  systemPrompt={modelSystemPrompts[modelId]}
-                  onSystemPromptChange={(prompt) => handleSystemPromptChange(modelId, prompt)}
-                  activePersonaLabel={modelPersonaLabels[modelId] ?? null}
-                  onActivePersonaLabelChange={(label) => handleActivePersonaLabelChange(modelId, label)}
-                  savedPersonas={savedPersonas}
-                  onSavePersona={handleSavePersona}
-                  onDeletePersona={handleDeletePersona}
-                />
-              </div>
+              <ChatPanel
+                modelId={modelId}
+                modelName={displayName}
+                response={response}
+                isLoading={isLoadingModel}
+                isLocked={conversationStarted || isLocalMode}
+                isFreeTier={!tierConfig.canAccessAllModels && !isLocalMode}
+                isAnonymous={userTier === "anonymous" && !isLocalMode}
+                panelIndex={index}
+                isInvalid={failedModels.has(modelId)}
+                reliabilityPercent={getModelReliability(modelId)}
+                supportsVision={supportsVision(modelId)}
+                responseDepth={depth}
+                onDepthChange={(d) => handleDepthChange(modelId, d)}
+                onOpenLightbox={() => response && setLightboxResponse(response)}
+                onOpenThread={() => setThreadModel({ id: modelId, name: model?.name || modelId })}
+                onModelChange={(newModel) => handleModelChange(index, newModel)}
+                onInfoClick={() => handleOpenModelInfo(modelId)}
+                onRetry={() => retryModel(modelId)}
+                onRemove={() => handleRemoveModelSlot(modelId)}
+                availableModels={availableModels}
+                groupedModels={groupedModels}
+                maxHeight={panelMaxHeight}
+                hasMultipleTurns={prompts.length > 1}
+                systemPrompt={modelSystemPrompts[modelId]}
+                onSystemPromptChange={(prompt) => handleSystemPromptChange(modelId, prompt)}
+                activePersonaLabel={modelPersonaLabels[modelId] ?? null}
+                onActivePersonaLabelChange={(label) => handleActivePersonaLabelChange(modelId, label)}
+                savedPersonas={savedPersonas}
+                onSavePersona={handleSavePersona}
+                onDeletePersona={handleDeletePersona}
+                viewMode={viewMode}
+              />
             );
-          })}
+          };
+
+          return (
+            <>
+        {/* Chat Panels Grid */}
+        <div
+          className={cn(
+            viewMode === "split"
+              ? "relative h-full overflow-hidden"
+              : `grid gap-4 ${getGridCols()}`
+          )}
+        >
+          {viewMode === "split" ? (
+            // Split view with mobile swipe support
+            <>
+              {/* Mobile: Swipeable carousel */}
+              <div className="md:hidden relative h-full overflow-hidden">
+                <div
+                  className="flex h-full transition-transform duration-300 ease-out touch-pan-y"
+                  style={{
+                    transform: `translateX(-${mobileActiveIndex * 100}%)`,
+                  }}
+                  onTouchStart={(e) => {
+                    const touch = e.touches[0];
+                    const startX = touch.clientX;
+                    const handleTouchMove = (moveEvent: TouchEvent) => {
+                      const currentX = moveEvent.touches[0].clientX;
+                      const diff = currentX - startX;
+                      if (Math.abs(diff) > 50) {
+                        if (diff > 0) handleSwipeRight();
+                        else handleSwipeLeft();
+                        document.removeEventListener("touchmove", handleTouchMove);
+                      }
+                    };
+                    document.addEventListener("touchmove", handleTouchMove, { once: true });
+                  }}
+                >
+                  {Array.from({ length: Math.min(2, panelCount) }).map((_, index) => (
+                    <div key={`mobile-panel-${index}`} className="w-full flex-shrink-0 px-4 py-2 h-full overflow-auto">
+                      {renderChatPanel(index)}
+                    </div>
+                  ))}
+                </div>
+                {/* Swipe indicators */}
+                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
+                  {Array.from({ length: Math.min(2, panelCount) }).map((_, index) => (
+                    <button
+                      key={`indicator-${index}`}
+                      onClick={() => setMobileActiveIndex(index)}
+                      className={cn(
+                        "w-2 h-2 rounded-full transition-all",
+                        index === mobileActiveIndex
+                          ? "bg-primary w-6"
+                          : "bg-muted-foreground/30"
+                      )}
+                      aria-label={`View model ${index + 1}`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Desktop: Side-by-side grid */}
+              <div className="hidden md:grid md:grid-cols-2 gap-4 h-full overflow-hidden">
+                {Array.from({ length: Math.min(2, panelCount) }).map((_, index) => (
+                  <div key={`desktop-panel-${index}`} className="flex flex-col h-full overflow-auto">
+                    {renderChatPanel(index)}
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            // Stack view (original behavior)
+            Array.from({ length: panelCount }).map((_, index) => (
+              <div key={`stack-panel-${index}`} className="transition-all duration-200">
+                {renderChatPanel(index)}
+              </div>
+            ))
+          )}
         </div>
-        
+            </>
+          );
+        })()}
+
         {/* ... */}
         
         {/* Reply Panel */}
@@ -1198,6 +1325,17 @@ const ModelMix = () => {
           onSwapModel={handleSwapModelForVision}
           onRemoveModelSlot={handleRemoveModelSlot}
           agents={isDeliberationModeEnabled ? deliberationAgents : undefined}
+          responses={responses}
+          prompts={prompts}
+          selectedModels={selectedModels.slice(0, panelCount)}
+          modelNames={Object.fromEntries(
+            selectedModels.slice(0, panelCount).map((id, index) => [
+              id,
+              isLocalMode
+                ? modelPersonaLabels[id] || SLOT_PERSONALITIES[index % SLOT_PERSONALITIES.length]?.name || `Agent ${index + 1}`
+                : getModel(id)?.name || id.split("/")[1] || id,
+            ])
+          )}
         />
       )}
       </main>
