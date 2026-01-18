@@ -156,6 +156,10 @@ const MentionInput = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const unmentionedModels = availableModels.filter(
+    (m) => !mentionedModels.some((mentioned) => mentioned.id === m.id)
+  );
+
   return (
     <div ref={containerRef} className="relative flex-1">
       <Textarea
@@ -167,26 +171,55 @@ const MentionInput = ({
         disabled={disabled}
         className="min-h-[50px] max-h-[100px] text-sm resize-none pr-2"
       />
-      
+
+      {/* Mentioned models - with remove button */}
       {mentionedModels.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-2">
+          <span className="text-xs text-muted-foreground self-center mr-1">Targeting:</span>
           {mentionedModels.map((model) => (
             <Badge
               key={model.id}
               variant="secondary"
-              className="gap-1 pr-1 text-xs"
+              className="gap-1 pr-1 text-xs bg-primary/10 text-primary border-primary/20"
             >
               @{model.name.split("/").pop()?.split(":")[0] || model.name}
               <button
                 type="button"
                 onClick={() => onMentionRemove(model.id)}
-                className="ml-0.5 rounded-full hover:bg-muted-foreground/20 p-0.5"
+                className="ml-0.5 rounded-full hover:bg-primary/20 p-0.5"
                 disabled={disabled}
+                title="Remove"
               >
                 <X className="h-3 w-3" />
               </button>
             </Badge>
           ))}
+        </div>
+      )}
+
+      {/* Quick-select buttons for unmentioned models */}
+      {unmentionedModels.length > 0 && availableModels.length > 1 && (
+        <div className="flex flex-wrap gap-1 mt-2">
+          <span className="text-xs text-muted-foreground self-center mr-1">Quick add:</span>
+          {unmentionedModels.slice(0, 6).map((model) => (
+            <Badge
+              key={model.id}
+              variant="outline"
+              className="gap-1 text-xs cursor-pointer hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors"
+              onClick={() => {
+                onMentionAdd(model);
+                textareaRef.current?.focus();
+              }}
+              title={`Click to target ${model.name}`}
+            >
+              +@{model.name.split("/").pop()?.split(":")[0] || model.name}
+            </Badge>
+          ))}
+          {unmentionedModels.length > 6 && (
+            <span className="text-xs text-muted-foreground self-center">
+              +{unmentionedModels.length - 6} more (type @)
+            </span>
+          )}
         </div>
       )}
 

@@ -1198,6 +1198,17 @@ const ModelMix = () => {
           onSwapModel={handleSwapModelForVision}
           onRemoveModelSlot={handleRemoveModelSlot}
           agents={isDeliberationModeEnabled ? deliberationAgents : undefined}
+          responses={responses}
+          prompts={prompts}
+          selectedModels={selectedModels.slice(0, panelCount)}
+          modelNames={Object.fromEntries(
+            selectedModels.slice(0, panelCount).map((id, index) => [
+              id,
+              isLocalMode
+                ? modelPersonaLabels[id] || SLOT_PERSONALITIES[index % SLOT_PERSONALITIES.length]?.name || `Agent ${index + 1}`
+                : getModel(id)?.name || id.split("/")[1] || id,
+            ])
+          )}
         />
       )}
       </main>

@@ -7,6 +7,8 @@ import MentionInput, { MentionedModel } from "@/components/MentionInput";
 import ReplyModeSelector, { ReplyMode } from "@/components/ReplyModeSelector";
 import { RoutingPicker } from "@/components/RoutingPicker";
 import { AgentIdentity } from "@/lib/localMode/types";
+import ContextualSuggestions from "@/components/ContextualSuggestions";
+import { ChatResponse } from "@/types";
 
 interface ReplyPanelProps {
   onSend: (
@@ -23,6 +25,10 @@ interface ReplyPanelProps {
   onSwapModel?: (oldModelId: string, newModelId: string) => void;
   onRemoveModelSlot?: (modelId: string) => void;
   agents?: AgentIdentity[];
+  responses?: ChatResponse[];
+  prompts?: string[];
+  selectedModels?: string[];
+  modelNames?: Record<string, string>;
 }
 
 const ReplyPanel = ({
@@ -34,6 +40,10 @@ const ReplyPanel = ({
   onSwapModel,
   onRemoveModelSlot,
   agents,
+  responses = [],
+  prompts = [],
+  selectedModels = [],
+  modelNames = {},
 }: ReplyPanelProps) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [message, setMessage] = useState("");
@@ -198,12 +208,26 @@ const ReplyPanel = ({
         <div className="container mx-auto px-4 py-3 pb-4">
           {/* Follow-up shortcuts */}
           <div className="mb-2">
-            <FollowUpShortcuts 
-              onSelect={handleShortcutSelect} 
+            <FollowUpShortcuts
+              onSelect={handleShortcutSelect}
               disabled={isLoading}
               onDeepResearchClick={onDeepResearchClick}
             />
           </div>
+
+          {/* Contextual AI suggestions */}
+          {responses.length > 0 && (
+            <div className="mb-3">
+              <ContextualSuggestions
+                responses={responses}
+                prompts={prompts}
+                onSelect={handleShortcutSelect}
+                disabled={isLoading}
+                selectedModels={selectedModels}
+                modelNames={modelNames}
+              />
+            </div>
+          )}
 
           <div className="flex items-start gap-2">
             <div className="flex-1 flex flex-col gap-2">

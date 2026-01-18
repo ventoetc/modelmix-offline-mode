@@ -7,7 +7,18 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -232,6 +243,7 @@ const ChatPanel = ({
   const [showAllModels, setShowAllModels] = useState(false);
   const [newPersonaName, setNewPersonaName] = useState("");
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
 
   // Check if current model is a free tier model
   const isCurrentModelFree = FREE_MODEL_IDS.includes(modelId);
@@ -738,8 +750,11 @@ const ChatPanel = ({
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                onClick={(e) => { e.stopPropagation(); onRemove(); }}
-                title="Remove"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowRemoveConfirm(true);
+                }}
+                title="Remove model from session"
               >
                 <X className="h-3.5 w-3.5" />
               </Button>
@@ -886,6 +901,35 @@ const ChatPanel = ({
           </div>
         )}
       </CardContent>
+
+      {/* Removal Confirmation Dialog */}
+      <AlertDialog open={showRemoveConfirm} onOpenChange={setShowRemoveConfirm}>
+        <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove {modelName} from session?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {hasMultipleTurns
+                ? "This model has conversation history in this session. Removing it will hide its responses, but you can add it back later."
+                : "This model hasn't responded yet. You can add it back anytime."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={(e) => e.stopPropagation()}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemove?.();
+                setShowRemoveConfirm(false);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };
