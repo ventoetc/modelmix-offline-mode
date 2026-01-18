@@ -1219,6 +1219,7 @@ const ModelMix = () => {
                   savedPersonas={savedPersonas}
                   onSavePersona={handleSavePersona}
                   onDeletePersona={handleDeletePersona}
+                  viewMode={viewMode}
                 />
               </div>
             );

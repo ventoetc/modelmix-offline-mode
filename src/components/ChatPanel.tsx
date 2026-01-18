@@ -153,6 +153,7 @@ interface ChatPanelProps {
   savedPersonas?: Array<{ id: string; name: string; prompt: string }>;
   onSavePersona?: (name: string, prompt: string) => void;
   onDeletePersona?: (id: string) => void;
+  viewMode?: "stack" | "split"; // View mode for layout adjustments
 }
 
 // Helper: Extract first 3-4 sentences as abstract (longer, more engaging)
@@ -238,6 +239,7 @@ const ChatPanel = ({
   savedPersonas = [],
   onSavePersona,
   onDeletePersona,
+  viewMode = "stack",
 }: ChatPanelProps) => {
   const navigate = useNavigate();
   const [showAllModels, setShowAllModels] = useState(false);
@@ -764,30 +766,49 @@ const ChatPanel = ({
         </div>
 
         {response && (
-          <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground mt-2">
-            <div className="flex items-center gap-3">
-              {response.latency && <span>{response.latency}ms</span>}
-              {response.tokenCount !== undefined && <span>{response.tokenCount} tokens</span>}
-              {!response.isError && typeof response.tokenDelta === "number" && (
-                <span>
-                  Δ {response.tokenDelta >= 0 ? `+${response.tokenDelta}` : response.tokenDelta} tokens
-                </span>
-              )}
-              {!response.isError && typeof response.cumulativeTokens === "number" && (
-                <span>Σ {response.cumulativeTokens} tokens</span>
-              )}
-              {response.isError && (
-                <span className="text-destructive flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  Error
-                </span>
-              )}
-              {!response.isError && (
-                <span className="text-green-600 dark:text-green-500 text-[10px]">✓</span>
-              )}
-            </div>
-            
-            {response?.agentId && (
+          <div
+            className={cn(
+              "flex items-center justify-between text-xs text-muted-foreground mt-2",
+              viewMode === "split" ? "gap-2" : "gap-3"
+            )}
+          >
+            {/* Compact stats in split view, detailed in stack view */}
+            {viewMode === "split" ? (
+              <div className="flex items-center gap-2 flex-wrap">
+                {response.latency && <span className="whitespace-nowrap">{response.latency}ms</span>}
+                {response.tokenCount !== undefined && <span className="whitespace-nowrap">{response.tokenCount}tok</span>}
+                {!response.isError && (
+                  <span className="text-green-600 dark:text-green-500 text-[10px]">✓</span>
+                )}
+                {response.isError && (
+                  <span className="text-destructive text-[10px]">✗</span>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                {response.latency && <span>{response.latency}ms</span>}
+                {response.tokenCount !== undefined && <span>{response.tokenCount} tokens</span>}
+                {!response.isError && typeof response.tokenDelta === "number" && (
+                  <span>
+                    Δ {response.tokenDelta >= 0 ? `+${response.tokenDelta}` : response.tokenDelta} tokens
+                  </span>
+                )}
+                {!response.isError && typeof response.cumulativeTokens === "number" && (
+                  <span>Σ {response.cumulativeTokens} tokens</span>
+                )}
+                {response.isError && (
+                  <span className="text-destructive flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    Error
+                  </span>
+                )}
+                {!response.isError && (
+                  <span className="text-green-600 dark:text-green-500 text-[10px]">✓</span>
+                )}
+              </div>
+            )}
+
+            {response?.agentId && viewMode !== "split" && (
               <Badge variant="outline" className="text-[10px] font-mono">
                 Agent {response.agentId.slice(0, 8)}
               </Badge>
