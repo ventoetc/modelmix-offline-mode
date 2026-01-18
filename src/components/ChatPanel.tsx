@@ -706,58 +706,59 @@ const ChatPanel = ({
             )}
 
             {/* Overflow menu for secondary actions */}
-            {response && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                  <Button variant="ghost" size="icon" className="h-7 w-7">
-                    <MoreHorizontal className="h-3.5 w-3.5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  
-                  <DropdownMenuItem onClick={handleSpeak}>
-                    {isSpeaking ? <VolumeX className="h-4 w-4 mr-2" /> : <Volume2 className="h-4 w-4 mr-2" />}
-                    {isSpeaking ? "Stop speaking" : "Read aloud"}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                <Button variant="ghost" size="icon" className="h-7 w-7">
+                  <MoreHorizontal className="h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                {response && (
+                  <>
+                    <DropdownMenuItem onClick={handleSpeak}>
+                      {isSpeaking ? <VolumeX className="h-4 w-4 mr-2" /> : <Volume2 className="h-4 w-4 mr-2" />}
+                      {isSpeaking ? "Stop speaking" : "Read aloud"}
+                    </DropdownMenuItem>
+
+                    {onInfoClick && (
+                      <DropdownMenuItem onClick={onInfoClick}>
+                        <Settings2 className="h-4 w-4 mr-2" />
+                        Model info
+                      </DropdownMenuItem>
+                    )}
+
+                    {hasMultipleTurns && onOpenThread && (
+                      <DropdownMenuItem onClick={onOpenThread}>
+                        <MessageSquare className="h-4 w-4 mr-2" />
+                        View thread
+                      </DropdownMenuItem>
+                    )}
+
+                    {(onInfoClick || hasMultipleTurns) && onRemove && <DropdownMenuSeparator />}
+                  </>
+                )}
+
+                {/* Remove model - moved from header to prevent accidental taps */}
+                {onRemove && (
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowRemoveConfirm(true);
+                    }}
+                    className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Remove from session
                   </DropdownMenuItem>
-                  
-                  {onInfoClick && (
-                    <DropdownMenuItem onClick={onInfoClick}>
-                      <Settings2 className="h-4 w-4 mr-2" />
-                      Model info
-                    </DropdownMenuItem>
-                  )}
-                  
-                  {hasMultipleTurns && onOpenThread && (
-                    <DropdownMenuItem onClick={onOpenThread}>
-                      <MessageSquare className="h-4 w-4 mr-2" />
-                      View thread
-                    </DropdownMenuItem>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* Attachment indicator */}
             {response?.hasAttachment && (
               <div className="flex items-center text-muted-foreground" title="Included image">
                 <ImageIcon className="h-3 w-3" />
               </div>
-            )}
-
-            {/* Remove button - always visible when available */}
-            {onRemove && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowRemoveConfirm(true);
-                }}
-                title="Remove model from session"
-              >
-                <X className="h-3.5 w-3.5" />
-              </Button>
             )}
           </div>
         </div>

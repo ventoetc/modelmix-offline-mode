@@ -5,10 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Send, Plus, Minus, RefreshCw, 
+import {
+  Send, Plus, Minus, RefreshCw,
   Sparkles, Zap, AlignLeft, FileText,
-  Coins, FilePlus, Settings
+  Coins, FilePlus, Settings, Columns2, AlignJustify
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -497,7 +497,19 @@ const ModelMix = () => {
   const [globalDepth, setGlobalDepth] = useState<ResponseDepth>("basic");
   const [expandedPanelId, setExpandedPanelId] = useState<string | null>(null);
   const [compareMode, setCompareMode] = useState(false);
-  
+
+  // View mode state for split/stack comparison
+  type ViewMode = "stack" | "split";
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    const saved = localStorage.getItem("modelmix-view-mode");
+    return (saved === "split" ? "split" : "stack") as ViewMode;
+  });
+
+  // Persist view mode preference
+  useEffect(() => {
+    localStorage.setItem("modelmix-view-mode", viewMode);
+  }, [viewMode]);
+
   // Round navigation state - now persisted
   const [prompts, setPrompts] = useState<string[]>(() => {
     const saved = localStorage.getItem(SESSION_STORAGE_KEY);
@@ -1069,7 +1081,7 @@ const ModelMix = () => {
       <main className="flex-1 flex flex-col h-full overflow-hidden relative w-full">
         {/* Header */}
         <header className="flex items-center justify-between px-4 py-3 border-b shrink-0 z-10 bg-background/80 backdrop-blur-sm">
-           {/* ... Header content ... */}
+           {/* Left: Logo + Title */}
            <div className="flex items-center gap-2">
              <SidebarTrigger />
              <div className="flex items-center gap-2">
@@ -1094,7 +1106,7 @@ const ModelMix = () => {
                     autoFocus
                   />
                 ) : (
-                  <h1 
+                  <h1
                     className="text-lg font-semibold truncate max-w-[200px] cursor-pointer hover:bg-muted/50 px-2 py-1 rounded"
                     onClick={() => setIsEditingTitle(true)}
                     title="Click to edit title"
@@ -1104,7 +1116,32 @@ const ModelMix = () => {
                 )}
              </div>
            </div>
-           
+
+           {/* Center: View Mode Toggle */}
+           {conversationStarted && responses.length > 0 && (
+             <div className="flex items-center gap-1 bg-muted/50 rounded-md p-1">
+               <Button
+                 variant={viewMode === "stack" ? "secondary" : "ghost"}
+                 size="sm"
+                 onClick={() => setViewMode("stack")}
+                 className="h-7 w-7 p-0"
+                 title="Stack view - vertical layout"
+               >
+                 <AlignJustify className="h-4 w-4" />
+               </Button>
+               <Button
+                 variant={viewMode === "split" ? "secondary" : "ghost"}
+                 size="sm"
+                 onClick={() => setViewMode("split")}
+                 className="h-7 w-7 p-0"
+                 title="Split view - side-by-side comparison"
+               >
+                 <Columns2 className="h-4 w-4" />
+               </Button>
+             </div>
+           )}
+
+           {/* Right: Controls */}
            <div className="flex items-center gap-2">
               {/* ... Right side controls ... */}
               <Button variant="ghost" size="icon" onClick={() => setShowSettings(true)}>
@@ -1117,8 +1154,14 @@ const ModelMix = () => {
         {/* ... */}
         
         {/* Chat Panels Grid */}
-        <div className={`grid gap-4 ${getGridCols()}`}>
-          {Array.from({ length: panelCount }).map((_, index) => {
+        <div
+          className={cn(
+            viewMode === "split"
+              ? "grid grid-cols-1 md:grid-cols-2 gap-4 h-full overflow-hidden"
+              : `grid gap-4 ${getGridCols()}`
+          )}
+        >
+          {Array.from({ length: viewMode === "split" ? Math.min(2, panelCount) : panelCount }).map((_, index) => {
             const modelId = selectedModels[index];
             const response = currentViewRound === "all"
               ? responses.find((r) => r.model === modelId && r.roundIndex === prompts.length - 1) 
@@ -1137,10 +1180,13 @@ const ModelMix = () => {
               : model?.name || modelId;
 
             return (
-              <div 
-                key={`panel-${index}`} 
+              <div
+                key={`panel-${index}`}
                 id={`chat-panel-${index}`}
-                className="transition-all duration-200"
+                className={cn(
+                  "transition-all duration-200",
+                  viewMode === "split" && "flex flex-col h-full overflow-auto"
+                )}
               >
                 <ChatPanel
                   modelId={modelId}
