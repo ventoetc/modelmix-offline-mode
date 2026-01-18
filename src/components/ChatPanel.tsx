@@ -617,38 +617,106 @@ const ChatPanel = ({
 
                     {onSavePersona && (
                       <div className="pt-2 border-t space-y-2">
-                        <Label className="text-xs font-medium">Saved Presets</Label>
-                        
+                        <Label className="text-xs font-medium">Presets</Label>
+
                         {(savedPersonas?.length || 0) > 0 ? (
-                          <div className="max-h-[120px] overflow-y-auto space-y-1 border rounded-md p-1">
-                            {savedPersonas?.map((persona) => (
-                              <div key={persona.id} className="flex items-center justify-between gap-2 p-1.5 hover:bg-muted rounded group text-xs">
-                                <span 
-                                  className="truncate flex-1 cursor-pointer font-medium"
-                                  onClick={() => {
-                                    onSystemPromptChange?.(persona.prompt);
-                                    onActivePersonaLabelChange?.(persona.name);
-                                    toast({ description: `Loaded preset: ${persona.name}` });
-                                  }}
-                                  title={persona.prompt}
-                                >
-                                  {persona.name}
-                                </span>
-                                {onDeletePersona && !persona.isReadOnly && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      onDeletePersona(persona.id);
-                                    }}
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
-                                )}
-                              </div>
-                            ))}
+                          <div className="max-h-[160px] overflow-y-auto space-y-2">
+                            {/* Built-in Personas */}
+                            {(() => {
+                              const builtInPersonas = savedPersonas?.filter(p => p.isReadOnly) || [];
+                              if (builtInPersonas.length === 0) return null;
+
+                              return (
+                                <div className="space-y-1">
+                                  <div className="flex items-center gap-1.5 px-1">
+                                    <div className="h-4 w-4 rounded-full bg-blue-500/10 flex items-center justify-center">
+                                      <span className="text-[10px]">🔵</span>
+                                    </div>
+                                    <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+                                      Built-in
+                                    </span>
+                                  </div>
+                                  <div className="border rounded-md p-1 space-y-0.5">
+                                    {builtInPersonas.map((persona) => (
+                                      <div
+                                        key={persona.id}
+                                        className="flex items-center justify-between gap-2 p-1.5 hover:bg-muted rounded group text-xs cursor-pointer"
+                                        onClick={() => {
+                                          onSystemPromptChange?.(persona.prompt);
+                                          onActivePersonaLabelChange?.(persona.name);
+                                          toast({ description: `Loaded preset: ${persona.name}` });
+                                        }}
+                                        title={persona.prompt}
+                                      >
+                                        <span className="truncate flex-1 font-medium">
+                                          {persona.name}
+                                        </span>
+                                        <Lock className="h-3 w-3 text-muted-foreground opacity-50" />
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })()}
+
+                            {/* Custom Personas */}
+                            {(() => {
+                              const customPersonas = savedPersonas?.filter(p => !p.isReadOnly) || [];
+                              if (customPersonas.length === 0) return null;
+
+                              return (
+                                <div className="space-y-1">
+                                  <div className="flex items-center gap-1.5 px-1">
+                                    <div className="h-4 w-4 rounded-full bg-green-500/10 flex items-center justify-center">
+                                      <span className="text-[10px]">🟢</span>
+                                    </div>
+                                    <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+                                      Custom
+                                    </span>
+                                  </div>
+                                  <div className="border rounded-md p-1 space-y-0.5">
+                                    {customPersonas.map((persona) => (
+                                      <div
+                                        key={persona.id}
+                                        className="flex items-center justify-between gap-2 p-1.5 hover:bg-muted rounded group text-xs"
+                                      >
+                                        <span
+                                          className="truncate flex-1 cursor-pointer font-medium"
+                                          onClick={() => {
+                                            onSystemPromptChange?.(persona.prompt);
+                                            onActivePersonaLabelChange?.(persona.name);
+                                            toast({ description: `Loaded preset: ${persona.name}` });
+                                          }}
+                                          title={persona.prompt}
+                                        >
+                                          {persona.name}
+                                        </span>
+                                        {onDeletePersona && (
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              onDeletePersona(persona.id);
+                                            }}
+                                          >
+                                            <Trash2 className="h-3 w-3" />
+                                          </Button>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })()}
+
+                            {/* No custom personas message */}
+                            {savedPersonas?.filter(p => !p.isReadOnly).length === 0 && (
+                              <p className="text-[10px] text-muted-foreground italic px-1">
+                                No custom presets yet. Create one above!
+                              </p>
+                            )}
                           </div>
                         ) : (
                           <p className="text-[10px] text-muted-foreground italic">No saved presets yet.</p>
