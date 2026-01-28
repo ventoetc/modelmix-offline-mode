@@ -7,7 +7,18 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -142,6 +153,7 @@ interface ChatPanelProps {
   savedPersonas?: Array<{ id: string; name: string; prompt: string }>;
   onSavePersona?: (name: string, prompt: string) => void;
   onDeletePersona?: (id: string) => void;
+  viewMode?: "stack" | "split"; // View mode for layout adjustments
 }
 
 // Helper: Extract first 3-4 sentences as abstract (longer, more engaging)
@@ -227,11 +239,13 @@ const ChatPanel = ({
   savedPersonas = [],
   onSavePersona,
   onDeletePersona,
+  viewMode = "stack",
 }: ChatPanelProps) => {
   const navigate = useNavigate();
   const [showAllModels, setShowAllModels] = useState(false);
   const [newPersonaName, setNewPersonaName] = useState("");
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
 
   // Check if current model is a free tier model
   const isCurrentModelFree = FREE_MODEL_IDS.includes(modelId);
@@ -603,38 +617,106 @@ const ChatPanel = ({
 
                     {onSavePersona && (
                       <div className="pt-2 border-t space-y-2">
-                        <Label className="text-xs font-medium">Saved Presets</Label>
-                        
+                        <Label className="text-xs font-medium">Presets</Label>
+
                         {(savedPersonas?.length || 0) > 0 ? (
-                          <div className="max-h-[120px] overflow-y-auto space-y-1 border rounded-md p-1">
-                            {savedPersonas?.map((persona) => (
-                              <div key={persona.id} className="flex items-center justify-between gap-2 p-1.5 hover:bg-muted rounded group text-xs">
-                                <span 
-                                  className="truncate flex-1 cursor-pointer font-medium"
-                                  onClick={() => {
-                                    onSystemPromptChange?.(persona.prompt);
-                                    onActivePersonaLabelChange?.(persona.name);
-                                    toast({ description: `Loaded preset: ${persona.name}` });
-                                  }}
-                                  title={persona.prompt}
-                                >
-                                  {persona.name}
-                                </span>
-                                {onDeletePersona && !persona.isReadOnly && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      onDeletePersona(persona.id);
-                                    }}
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
-                                )}
-                              </div>
-                            ))}
+                          <div className="max-h-[160px] overflow-y-auto space-y-2">
+                            {/* Built-in Personas */}
+                            {(() => {
+                              const builtInPersonas = savedPersonas?.filter(p => p.isReadOnly) || [];
+                              if (builtInPersonas.length === 0) return null;
+
+                              return (
+                                <div className="space-y-1">
+                                  <div className="flex items-center gap-1.5 px-1">
+                                    <div className="h-4 w-4 rounded-full bg-blue-500/10 flex items-center justify-center">
+                                      <span className="text-[10px]">🔵</span>
+                                    </div>
+                                    <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+                                      Built-in
+                                    </span>
+                                  </div>
+                                  <div className="border rounded-md p-1 space-y-0.5">
+                                    {builtInPersonas.map((persona) => (
+                                      <div
+                                        key={persona.id}
+                                        className="flex items-center justify-between gap-2 p-1.5 hover:bg-muted rounded group text-xs cursor-pointer"
+                                        onClick={() => {
+                                          onSystemPromptChange?.(persona.prompt);
+                                          onActivePersonaLabelChange?.(persona.name);
+                                          toast({ description: `Loaded preset: ${persona.name}` });
+                                        }}
+                                        title={persona.prompt}
+                                      >
+                                        <span className="truncate flex-1 font-medium">
+                                          {persona.name}
+                                        </span>
+                                        <Lock className="h-3 w-3 text-muted-foreground opacity-50" />
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })()}
+
+                            {/* Custom Personas */}
+                            {(() => {
+                              const customPersonas = savedPersonas?.filter(p => !p.isReadOnly) || [];
+                              if (customPersonas.length === 0) return null;
+
+                              return (
+                                <div className="space-y-1">
+                                  <div className="flex items-center gap-1.5 px-1">
+                                    <div className="h-4 w-4 rounded-full bg-green-500/10 flex items-center justify-center">
+                                      <span className="text-[10px]">🟢</span>
+                                    </div>
+                                    <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+                                      Custom
+                                    </span>
+                                  </div>
+                                  <div className="border rounded-md p-1 space-y-0.5">
+                                    {customPersonas.map((persona) => (
+                                      <div
+                                        key={persona.id}
+                                        className="flex items-center justify-between gap-2 p-1.5 hover:bg-muted rounded group text-xs"
+                                      >
+                                        <span
+                                          className="truncate flex-1 cursor-pointer font-medium"
+                                          onClick={() => {
+                                            onSystemPromptChange?.(persona.prompt);
+                                            onActivePersonaLabelChange?.(persona.name);
+                                            toast({ description: `Loaded preset: ${persona.name}` });
+                                          }}
+                                          title={persona.prompt}
+                                        >
+                                          {persona.name}
+                                        </span>
+                                        {onDeletePersona && (
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              onDeletePersona(persona.id);
+                                            }}
+                                          >
+                                            <Trash2 className="h-3 w-3" />
+                                          </Button>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })()}
+
+                            {/* No custom personas message */}
+                            {savedPersonas?.filter(p => !p.isReadOnly).length === 0 && (
+                              <p className="text-[10px] text-muted-foreground italic px-1">
+                                No custom presets yet. Create one above!
+                              </p>
+                            )}
                           </div>
                         ) : (
                           <p className="text-[10px] text-muted-foreground italic">No saved presets yet.</p>
@@ -694,36 +776,53 @@ const ChatPanel = ({
             )}
 
             {/* Overflow menu for secondary actions */}
-            {response && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                  <Button variant="ghost" size="icon" className="h-7 w-7">
-                    <MoreHorizontal className="h-3.5 w-3.5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  
-                  <DropdownMenuItem onClick={handleSpeak}>
-                    {isSpeaking ? <VolumeX className="h-4 w-4 mr-2" /> : <Volume2 className="h-4 w-4 mr-2" />}
-                    {isSpeaking ? "Stop speaking" : "Read aloud"}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                <Button variant="ghost" size="icon" className="h-7 w-7">
+                  <MoreHorizontal className="h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                {response && (
+                  <>
+                    <DropdownMenuItem onClick={handleSpeak}>
+                      {isSpeaking ? <VolumeX className="h-4 w-4 mr-2" /> : <Volume2 className="h-4 w-4 mr-2" />}
+                      {isSpeaking ? "Stop speaking" : "Read aloud"}
+                    </DropdownMenuItem>
+
+                    {onInfoClick && (
+                      <DropdownMenuItem onClick={onInfoClick}>
+                        <Settings2 className="h-4 w-4 mr-2" />
+                        Model info
+                      </DropdownMenuItem>
+                    )}
+
+                    {hasMultipleTurns && onOpenThread && (
+                      <DropdownMenuItem onClick={onOpenThread}>
+                        <MessageSquare className="h-4 w-4 mr-2" />
+                        View thread
+                      </DropdownMenuItem>
+                    )}
+
+                    {(onInfoClick || hasMultipleTurns) && onRemove && <DropdownMenuSeparator />}
+                  </>
+                )}
+
+                {/* Remove model - moved from header to prevent accidental taps */}
+                {onRemove && (
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowRemoveConfirm(true);
+                    }}
+                    className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Remove from session
                   </DropdownMenuItem>
-                  
-                  {onInfoClick && (
-                    <DropdownMenuItem onClick={onInfoClick}>
-                      <Settings2 className="h-4 w-4 mr-2" />
-                      Model info
-                    </DropdownMenuItem>
-                  )}
-                  
-                  {hasMultipleTurns && onOpenThread && (
-                    <DropdownMenuItem onClick={onOpenThread}>
-                      <MessageSquare className="h-4 w-4 mr-2" />
-                      View thread
-                    </DropdownMenuItem>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* Attachment indicator */}
             {response?.hasAttachment && (
@@ -731,47 +830,53 @@ const ChatPanel = ({
                 <ImageIcon className="h-3 w-3" />
               </div>
             )}
-
-            {/* Remove button - always visible when available */}
-            {onRemove && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                onClick={(e) => { e.stopPropagation(); onRemove(); }}
-                title="Remove"
-              >
-                <X className="h-3.5 w-3.5" />
-              </Button>
-            )}
           </div>
         </div>
 
         {response && (
-          <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground mt-2">
-            <div className="flex items-center gap-3">
-              {response.latency && <span>{response.latency}ms</span>}
-              {response.tokenCount !== undefined && <span>{response.tokenCount} tokens</span>}
-              {!response.isError && typeof response.tokenDelta === "number" && (
-                <span>
-                  Δ {response.tokenDelta >= 0 ? `+${response.tokenDelta}` : response.tokenDelta} tokens
-                </span>
-              )}
-              {!response.isError && typeof response.cumulativeTokens === "number" && (
-                <span>Σ {response.cumulativeTokens} tokens</span>
-              )}
-              {response.isError && (
-                <span className="text-destructive flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  Error
-                </span>
-              )}
-              {!response.isError && (
-                <span className="text-green-600 dark:text-green-500 text-[10px]">✓</span>
-              )}
-            </div>
-            
-            {response?.agentId && (
+          <div
+            className={cn(
+              "flex items-center justify-between text-xs text-muted-foreground mt-2",
+              viewMode === "split" ? "gap-2" : "gap-3"
+            )}
+          >
+            {/* Compact stats in split view, detailed in stack view */}
+            {viewMode === "split" ? (
+              <div className="flex items-center gap-2 flex-wrap">
+                {response.latency && <span className="whitespace-nowrap">{response.latency}ms</span>}
+                {response.tokenCount !== undefined && <span className="whitespace-nowrap">{response.tokenCount}tok</span>}
+                {!response.isError && (
+                  <span className="text-green-600 dark:text-green-500 text-[10px]">✓</span>
+                )}
+                {response.isError && (
+                  <span className="text-destructive text-[10px]">✗</span>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                {response.latency && <span>{response.latency}ms</span>}
+                {response.tokenCount !== undefined && <span>{response.tokenCount} tokens</span>}
+                {!response.isError && typeof response.tokenDelta === "number" && (
+                  <span>
+                    Δ {response.tokenDelta >= 0 ? `+${response.tokenDelta}` : response.tokenDelta} tokens
+                  </span>
+                )}
+                {!response.isError && typeof response.cumulativeTokens === "number" && (
+                  <span>Σ {response.cumulativeTokens} tokens</span>
+                )}
+                {response.isError && (
+                  <span className="text-destructive flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    Error
+                  </span>
+                )}
+                {!response.isError && (
+                  <span className="text-green-600 dark:text-green-500 text-[10px]">✓</span>
+                )}
+              </div>
+            )}
+
+            {response?.agentId && viewMode !== "split" && (
               <Badge variant="outline" className="text-[10px] font-mono">
                 Agent {response.agentId.slice(0, 8)}
               </Badge>
@@ -886,6 +991,35 @@ const ChatPanel = ({
           </div>
         )}
       </CardContent>
+
+      {/* Removal Confirmation Dialog */}
+      <AlertDialog open={showRemoveConfirm} onOpenChange={setShowRemoveConfirm}>
+        <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove {modelName} from session?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {hasMultipleTurns
+                ? "This model has conversation history in this session. Removing it will hide its responses, but you can add it back later."
+                : "This model hasn't responded yet. You can add it back anytime."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={(e) => e.stopPropagation()}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemove?.();
+                setShowRemoveConfirm(false);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };
