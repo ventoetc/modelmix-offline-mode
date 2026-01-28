@@ -60,6 +60,15 @@ const parseStoredConfig = (): Partial<LocalModeConfig> => {
 };
 
 export const getExecutionMode = (): ExecutionMode => {
+  // Check localStorage first (user preference from toggle)
+  if (typeof window !== "undefined") {
+    const storedMode = localStorage.getItem("modelmix-execution-mode");
+    if (storedMode === "local" || storedMode === "cloud") {
+      return storedMode as ExecutionMode;
+    }
+  }
+
+  // Fall back to environment variable
   const envValue = runtimeEnv.VITE_EXECUTION_MODE;
   if (envValue && envValue.toLowerCase() === "local") return "local";
   return "cloud";

@@ -29,7 +29,8 @@ import {
 import {
   Menu, Coins, MessageSquare,
   User, LogOut, Share2, Copy, Shield, ExternalLink,
-  Activity, ChevronDown, Github, Key, HardDrive, RefreshCw, Settings
+  Activity, ChevronDown, Github, Key, HardDrive, RefreshCw, Settings,
+  Globe, Wifi, WifiOff
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -77,6 +78,9 @@ interface SettingsModalProps {
   onLocalModelIdChange?: (nextId: string) => void;
   onRefreshLocalModelId?: () => void;
   localModels?: Array<{ id: string; name?: string; maxContextLength?: number }>;
+
+  // Mode Toggle
+  onToggleMode?: () => void;
 }
 
 const SettingsModal = ({
@@ -103,6 +107,7 @@ const SettingsModal = ({
   onLocalModelIdChange,
   onRefreshLocalModelId,
   localModels = [],
+  onToggleMode,
 }: SettingsModalProps) => {
   const isMobile = useIsMobile();
   const [copied, setCopied] = useState(false);
@@ -136,6 +141,67 @@ const SettingsModal = ({
         </DialogHeader>
 
         <div className="space-y-6 py-4">
+          {/* Execution Mode Toggle */}
+          {onToggleMode && (
+            <section className="space-y-3">
+              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Execution Mode</h3>
+              <div className="bg-muted/30 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {isLocalMode ? (
+                      <div className="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center">
+                        <WifiOff className="h-5 w-5 text-blue-500" />
+                      </div>
+                    ) : (
+                      <div className="h-10 w-10 rounded-full bg-green-500/10 flex items-center justify-center">
+                        <Globe className="h-5 w-5 text-green-500" />
+                      </div>
+                    )}
+                    <div>
+                      <p className="font-medium">{isLocalMode ? "Local Mode (Offline)" : "Cloud Mode (Online)"}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {isLocalMode
+                          ? "Running on your local AI server"
+                          : "Using cloud-based AI models"}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onToggleMode}
+                    className="gap-2"
+                  >
+                    {isLocalMode ? (
+                      <>
+                        <Wifi className="h-4 w-4" />
+                        Switch to Cloud
+                      </>
+                    ) : (
+                      <>
+                        <WifiOff className="h-4 w-4" />
+                        Switch to Local
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <div className="mt-3 p-2 bg-background rounded-md border text-xs text-muted-foreground">
+                  {isLocalMode ? (
+                    <>
+                      <strong>Local Mode:</strong> Requires LMStudio or compatible server running.
+                      All processing happens on your machine. No internet required.
+                    </>
+                  ) : (
+                    <>
+                      <strong>Cloud Mode:</strong> Uses Supabase backend with OpenRouter/direct APIs.
+                      Requires internet connection. Credits/BYOK supported.
+                    </>
+                  )}
+                </div>
+              </div>
+            </section>
+          )}
+
           {/* User Account Section */}
           <section className="space-y-3">
             <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Account</h3>
